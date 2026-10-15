@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Generates zelda3_assets.dat from your US ROM (never included or distributed).
+# Generates zelda3_assets.dat from your US ROM (never included or distributed), including every
+# translation found in lang/ (see lang/README.md).
 # Usage: scripts/extract-assets.sh [path/to/zelda3.sfc]   (defaults to rom/zelda3.sfc)
+# LANGUAGES=es,fr limits the translations that are built (default: all of lang/).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/zelda3.sfc}"
@@ -17,7 +19,11 @@ if [ "$sha" != "$EXPECTED_SHA256" ]; then
 fi
 
 ROM="$(cd "$(dirname "$ROM")" && pwd)/$(basename "$ROM")"
-python3 "$UP/assets/restool.py" --extract-from-rom -r "$ROM"
+# 1. Extract the US resources (graphics, font.png, dialogue.txt...) from the ROM.
+python3 "$UP/assets/restool.py" --extract-from-rom --no-build -r "$ROM"
+# 2. Add the translations from lang/ and compile zelda3_assets.dat.
+python3 "$ROOT/tools/lang/build_assets.py" --assets "$UP/assets" --rom "$ROM" --lang-dir "$ROOT/lang" \
+  ${LANGUAGES:+--languages "$LANGUAGES"}
 mkdir -p "$ROOT/build"
 mv "$UP/zelda3_assets.dat" "$ROOT/build/zelda3_assets.dat"
 echo ">> OK: build/zelda3_assets.dat"

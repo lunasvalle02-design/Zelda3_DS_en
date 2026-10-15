@@ -13,6 +13,7 @@ patches**.
 | `0004` | Larger hearts, magic meter and dungeon floor plates |
 | `0005` | GPU-rendered bottom screen with `OutputMethod = SDL` and performance logging |
 | `0006` | ROCKNIX suspend integration (logind `PrepareForSleep` + delay inhibitor) |
+| `0007` | Multi-language support with runtime language selection (`src/i18n.c`) |
 
 See [`docs/ROCKNIX-RGDSPLUS.md`](../docs/ROCKNIX-RGDSPLUS.md#port-changes-patches) for details.
 
