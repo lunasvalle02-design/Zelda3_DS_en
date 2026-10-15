@@ -1,0 +1,10 @@
+# Scripts run on Linux (container and device): force LF even when cloned on Windows.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.sfc binary
+*.smc binary
+*.dat binary
+# Patches touch upstream files that use CRLF: never convert their line endings.
+*.patch -text

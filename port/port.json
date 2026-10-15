@@ -1,0 +1,28 @@
+{
+    "version": 2,
+    "name": "zelda3.zip",
+    "items": [
+        "zelda3/",
+        "Zelda3.sh"
+    ],
+    "items_opt": null,
+    "attr": {
+        "title": "Zelda3 DS",
+        "desc": "Native port of the reimplementation of The Legend of Zelda: A Link to the Past (snesrev/zelda3) with a dual-screen interface: the game on top; map, touch inventory and settings below.",
+        "inst": "Generate zelda3_assets.dat from your US ALttP ROM and copy it to ports/zelda3/.",
+        "genres": [
+            "action",
+            "adventure"
+        ],
+        "porter": [
+            "Luna"
+        ],
+        "image": {},
+        "rtr": false,
+        "runtime": null,
+        "reqs": [],
+        "arch": [
+            "aarch64"
+        ]
+    }
+}

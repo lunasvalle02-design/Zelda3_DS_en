@@ -1,0 +1,111 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Luna <luna.svalle.02@gmail.com>
+Date: Thu, 15 Oct 2026 18:39:27 +0200
+Subject: [PATCH 4/6] rgds: larger hearts, magic meter and dungeon floor plates
+
+---
+ .../src/platform/linux/second_screen_sdl.c    | 50 ++++++++++++-------
+ 1 file changed, 31 insertions(+), 19 deletions(-)
+
+diff --git a/app/jni/src/src/platform/linux/second_screen_sdl.c b/app/jni/src/src/platform/linux/second_screen_sdl.c
+index afd78e2..7e9c789 100644
+--- a/app/jni/src/src/platform/linux/second_screen_sdl.c
++++ b/app/jni/src/src/platform/linux/second_screen_sdl.c
+@@ -569,8 +569,12 @@ static void draw_dungeon(RectFS r, int link_x, int link_y, int room, int dungeon
+ 
+   // floor plaques down the left side
+   plaque_count = 0;
+-  float ph = 50 * u, pw = 100 * u, pgap = 8 * u;
+-  float px0 = r.x + 24 * u, py0 = r.y + 78 * u;
++  // zelda3-ds: larger plaques with 3x labels; shrink only when the floors don't fit
++  float pw = 124 * u, pgap = 8 * u, py0 = r.y + 78 * u;
++  float ph = 58 * u, ph_fit = (r.y + r.h - 16 * u - py0) / (d->floors > 0 ? d->floors : 1) - pgap;
++  if (ph > ph_fit) ph = ph_fit;
++  float px0 = r.x + 20 * u;
++  float label_s = ph >= 40 * u ? 3 * u : 2 * u;
+   for (int f = d->floors - 1; f >= 0; f--) {
+     int fl = f - d->basements;
+     if (plaque_count >= 16) break;
+@@ -585,10 +589,12 @@ static void draw_dungeon(RectFS r, int link_x, int link_y, int room, int dungeon
+     char label[16];
+     if (fl >= 0) snprintf(label, sizeof(label), "%dF", fl + 1);
+     else snprintf(label, sizeof(label), "B%d", -fl);
+-    draw_text(label, pr->x + pr->w / 2 - text_width(label, 2 * u) / 2 + 8 * u,
+-              pr->y + pr->h / 2 - 8 * u, 2 * u);
++    float face_px = 16 * px_scale(2 * u);
++    float lx = pr->x + face_px + 6 * u;   // text centred in the space right of the face
++    draw_text(label, lx + (pr->x + pr->w - lx) / 2 - text_width(label, label_s) / 2,
++              pr->y + pr->h / 2 - 4 * px_scale(label_s), label_s);
+     if (fl == floor) {
+-      SDL_FRect fdst = {pr->x + 4 * u, pr->y + pr->h / 2 - 13 * u, 16 * 1.7f * u, 16 * 1.7f * u};
++      SDL_FRect fdst = {floorf(pr->x + 4 * u), floorf(pr->y + pr->h / 2 - face_px / 2), face_px, face_px};
+       SDL_RenderCopyF(ss_r, tex_face, NULL, &fdst);
+     }
+     py0 += ph + pgap;
+@@ -793,10 +799,12 @@ static void draw_sidebar(float x, float y, float w, float h, bool dungeon_mode)
+   }
+ 
+   // magic bar + hearts anchored at the bottom; ring centered in what's left
+-  float hs = 19 * u, bar_h = 18 * u;
++  // zelda3-ds: hearts at 3x and a taller magic bar, readable on the 4.3" panel
++  float heart_s = px_scale(3 * u);
++  float hs = 8 * heart_s + 1, bar_h = 30 * u;
+   bool half_magic = sram8(0x7B) >= 1;
+-  float my = y + h - bar_h - 6 * u;
+-  float hy = my - 2 * hs - 16 * u - (half_magic ? 18 * u : 0);
++  float my = y + h - bar_h - 8 * u;
++  float hy = my - 2 * hs - 14 * u - (half_magic ? 8 * px_scale(3 * u) + 6 * u : 0);
+ 
+   // equipped item ring: tap cycles to the next owned item
+   float ring_r = 66 * u;
+@@ -818,27 +826,31 @@ static void draw_sidebar(float x, float y, float w, float h, bool dungeon_mode)
+   // hearts (live health)
+   int cap = sram8(0x6C) >> 3; if (cap > 20) cap = 20;
+   int cur = sram8(0x6D);
+-  int row_n = cap < 10 ? cap : 10;
+-  float hx0 = x + (w - row_n * hs) / 2;
++  int per_row = (int)((w - 4 * u) / hs);
++  if (per_row > 10) per_row = 10;
++  if (per_row < 1) per_row = 1;
++  int row_n = cap < per_row ? cap : per_row;
++  float hx0 = floorf(x + (w - row_n * hs) / 2);
+   for (int i = 0; i < cap; i++) {
+     int g = i < (cur >> 3) ? SS_GLYPH_HEART_FULL
+           : (i == (cur >> 3) && (cur & 7) >= 4 ? SS_GLYPH_HEART_HALF : SS_GLYPH_HEART_EMPTY);
+-    draw_glyph(g, hx0 + (i % 10) * hs, hy + (i / 10) * hs, 2.2f * u);
++    draw_glyph(g, hx0 + (i % per_row) * hs, hy + (i / per_row) * hs, heart_s);
+   }
+ 
+   // magic bar (with the HUD's 1/2 marker when the upgrade is owned)
+   if (half_magic) {
+-    float gx = x + (w - 48 * u) / 2;
+-    draw_glyph(SS_GLYPH_HALF0, gx, my - 20 * u, 2 * u);
+-    draw_glyph(SS_GLYPH_HALF1, gx + 16 * u, my - 20 * u, 2 * u);
+-    draw_glyph(SS_GLYPH_HALF2, gx + 32 * u, my - 20 * u, 2 * u);
++    float gs = px_scale(3 * u);
++    float gx = floorf(x + (w - 24 * gs) / 2), gy = my - 8 * gs - 4 * u;
++    draw_glyph(SS_GLYPH_HALF0, gx, gy, gs);
++    draw_glyph(SS_GLYPH_HALF1, gx + 8 * gs, gy, gs);
++    draw_glyph(SS_GLYPH_HALF2, gx + 16 * gs, gy, gs);
+   }
+   int magic = sram8(0x6E); if (magic > 128) magic = 128;
+-  fill_round(x + 16 * u, my, w - 32 * u, bar_h, 5 * u, COL_GOLD_DARK);
+-  fill_round(x + 18 * u, my + 2 * u, w - 36 * u, bar_h - 4 * u, 4 * u, COL_BOX);
++  fill_round(x + 12 * u, my, w - 24 * u, bar_h, 7 * u, COL_GOLD_DARK);
++  fill_round(x + 15 * u, my + 3 * u, w - 30 * u, bar_h - 6 * u, 5 * u, COL_BOX);
+   float frac = magic / 128.0f;
+   if (frac > 0)
+-    fill_round(x + 19 * u, my + 3 * u, (w - 38 * u) * frac, bar_h - 6 * u, 3 * u, COL(72, 208, 72));
++    fill_round(x + 17 * u, my + 5 * u, (w - 34 * u) * frac, bar_h - 10 * u, 4 * u, COL(72, 208, 72));
+ }
+ 
+ // Rewrite one `key = value` line inside a section of zelda3.ini
+@@ -1384,7 +1396,7 @@ void SecondScreenSDL_Update(void) {
+              (RectFS){0, 0, W, H},
+              dungeon_mode ? COL_BG_STONE : COL_BG_MENU);
+   float tab_h = 84 * u;
+-  float side_w = 200 * u;
++  float side_w = 256 * u;   // zelda3-ds: wider, for 3x hearts
+   map_area_r = (RectFS){10 * u, 10 * u, W - side_w - 14 * u, H - tab_h - 14 * u};
+ 
+   if (tab == TAB_ITEMS)      draw_items(map_area_r);

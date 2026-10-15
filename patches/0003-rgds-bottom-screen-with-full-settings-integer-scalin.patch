@@ -1,0 +1,451 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Luna <luna.svalle.02@gmail.com>
+Date: Thu, 15 Oct 2026 18:17:38 +0200
+Subject: [PATCH 3/6] rgds: bottom screen with full settings, integer scaling,
+ in-game markers and touch diagnostics
+
+---
+ .../src/platform/linux/second_screen_sdl.c    | 301 ++++++++++++++----
+ 1 file changed, 243 insertions(+), 58 deletions(-)
+
+diff --git a/app/jni/src/src/platform/linux/second_screen_sdl.c b/app/jni/src/src/platform/linux/second_screen_sdl.c
+index 49729d4..afd78e2 100644
+--- a/app/jni/src/src/platform/linux/second_screen_sdl.c
++++ b/app/jni/src/src/platform/linux/second_screen_sdl.c
+@@ -50,6 +50,15 @@ void SS_ArmButtonCapture(bool arm);
+ int  SS_GetCapturedButton(void);
+ void SS_GetGamepadControls(int *out12);
+ void SS_SetGamepadControls(const int *in12);
++// zelda3-ds additions
++void SS_SetTopAspect(int mode);
++int  SS_GetTopAspect(void);
++void SS_SetCrtFilter(bool on);
++bool SS_IsCrtFilter(void);
++void SS_SetAutosave(bool on);
++bool SS_GetAutosave(void);
++void SS_SaveLoadState(bool save);
++int  SS_GetMapMarkers(bool dark_world, int *out5, int cap);
+ 
+ // palette (MinimapView)
+ #define COL(r,g,b) (0xff000000u | ((r) << 16) | ((g) << 8) | (b))
+@@ -158,7 +167,16 @@ static bool ss_needs_rebuild;
+ 
+ // touch rects recomputed every draw, used by the tap handler
+ static RectFS map_area_r, tab_items_r, tab_gear_r, tab_map_r, tab_settings_r, y_ring_r;
+-static RectFS settings_row_r[3], remap_row_r[12], remap_back_r;
++enum { SET_ASPECT, SET_HUD, SET_CRT, SET_AUTOSAVE, SET_STATES, SET_REMAP, SET_QUIT, SET_COUNT };
++static RectFS settings_row_r[SET_COUNT], save_state_r, load_state_r, remap_row_r[12], remap_back_r;
++static RectFS tab_bar_r;
++static const char *const kAspectLabel[4] = {"ORIGINAL", "STRETCH", "WIDE", "PIXEL"};
++static const char *const kAspectIni[4]   = {"original", "stretch", "wide", "pixel"};
++static uint32_t quit_armed_until;      // QUIT needs a second tap within 3 s
++static const char *toast_text;         // short confirmation shown in settings
++static uint32_t toast_until;
++static bool touch_debug;               // ZELDA3_TOUCH_DEBUG=1: log + crosshair
++static float last_tap_x = -1, last_tap_y = -1;
+ 
+ // settings / remap state
+ static bool remap_mode;
+@@ -268,17 +286,23 @@ static void tri_up(float cx, float top, float size, uint32_t c) {
+   }
+ }
+ 
++// zelda3-ds: pixel art is only drawn at whole-number scales on whole pixels, so
++// every source pixel becomes the same number of screen pixels (no uneven columns).
++static float px_scale(float s) { return s >= 1.0f ? floorf(s + 0.5f) : s; }
++
+ // blit one cell from a sheet texture
+ static void draw_cell(SDL_Texture *tex, int cell, int cellpx, int cols, float x, float y, float s) {
+   if (cell < 0 || !tex) return;
++  s = px_scale(s);
+   SDL_Rect src = {(cell % cols) * cellpx, (cell / cols) * cellpx, cellpx, cellpx};
+-  SDL_FRect dst = {x, y, cellpx * s, cellpx * s};
++  SDL_FRect dst = {floorf(x), floorf(y), cellpx * s, cellpx * s};
+   SDL_RenderCopyF(ss_r, tex, &src, &dst);
+ }
+ static void draw_icon(int cell, float x, float y, float s)  { draw_cell(tex_icons, cell, 16, SS_ICON_COLS, x, y, s); }
+ static void draw_glyph(int cell, float x, float y, float s) { draw_cell(tex_glyphs, cell, 8, SS_GLYPH_COLS, x, y, s); }
+ 
+ static float text_width(const char *s, float sc) {
++  sc = px_scale(sc);
+   float w = 0;
+   for (; *s; s++) w += (*s == ' ' ? 5 : 8) * sc;
+   return w;
+@@ -288,7 +312,8 @@ static void draw_text(const char *s, float x, float y, float sc) {
+     SS_GLYPH_DIGIT0, SS_GLYPH_DIGIT1, SS_GLYPH_DIGIT2, SS_GLYPH_DIGIT3, SS_GLYPH_DIGIT4,
+     SS_GLYPH_DIGIT5, SS_GLYPH_DIGIT6, SS_GLYPH_DIGIT7, SS_GLYPH_DIGIT8, SS_GLYPH_DIGIT9,
+   };
+-  float cx = x;
++  sc = px_scale(sc);
++  float cx = floorf(x);
+   for (; *s; s++) {
+     char ch = *s;
+     if (ch == ' ') { cx += 5 * sc; continue; }
+@@ -298,6 +323,7 @@ static void draw_text(const char *s, float x, float y, float sc) {
+   }
+ }
+ static void draw_number(int value, int digits, float x, float y, float s, bool yellow) {
++  s = px_scale(s);
+   static const int kD[10]  = {SS_GLYPH_DIGIT0, SS_GLYPH_DIGIT1, SS_GLYPH_DIGIT2, SS_GLYPH_DIGIT3, SS_GLYPH_DIGIT4,
+                               SS_GLYPH_DIGIT5, SS_GLYPH_DIGIT6, SS_GLYPH_DIGIT7, SS_GLYPH_DIGIT8, SS_GLYPH_DIGIT9};
+   static const int kDy[10] = {SS_GLYPH_DIGIT0Y, SS_GLYPH_DIGIT1Y, SS_GLYPH_DIGIT2Y, SS_GLYPH_DIGIT3Y, SS_GLYPH_DIGIT4Y,
+@@ -409,6 +435,61 @@ static void draw_cinema(void) {
+   tri_up(cx + s * 0.58f, cy, s, c);    // bottom-right
+ }
+ 
++// One in-game map objective (WorldMap_HandleSprites): blinking X for "go here",
++// otherwise the pendant / Master Sword / crystal / tower icon, blinking like the game.
++static void draw_marker(int icon, int index, float mx, float my) {
++  bool blink_on = (SDL_GetTicks() / 267) & 1;   // frame_counter & 0x10 at 60 fps
++  float r = 9 * u;
++  if (icon == 0 || icon == 0x66) {
++    float pulse = 1.0f + 0.25f * sinf(SDL_GetTicks() / 120.0f);
++    if (icon == 0x66) {   // Agahnim's / Ganon's tower: gold ring behind the X
++      stroke_circle(mx, my, 14 * u, 4 * u, COL_OUTLINE);
++      stroke_circle(mx, my, 14 * u, 2.5f * u, COL_GOLD);
++    }
++    draw_x_mark(mx, my, r * pulse, 8 * u, COL_OUTLINE);
++    draw_x_mark(mx, my, r * pulse, 4.5f * u, COL(224, 40, 32));
++    return;
++  }
++  if (!blink_on) return;
++  if (icon == 0x62) {   // Master Sword
++    fill_circle(mx, my, 15 * u, COL_OUTLINE);
++    draw_icon(SS_ICON_SWORD_2, mx - 8 * px_scale(1.6f * u), my - 8 * px_scale(1.6f * u), 1.6f * u);
++    return;
++  }
++  uint32_t c;
++  if (icon == 0x60) {   // pendants: Courage (Eastern), Wisdom (Hera), Power (Desert)
++    static const uint32_t kPendantCol[3] = {COL(64, 200, 88), COL(230, 60, 60), COL(70, 110, 240)};
++    c = kPendantCol[index < 3 ? index : 0];
++    stroke_circle(mx, my - 9 * u, 4 * u, 2 * u, COL_GOLD);
++    fill_circle(mx, my + 2 * u, 10 * u, COL_OUTLINE);
++    fill_circle(mx, my + 2 * u, 7.5f * u, c);
++    fill_circle(mx - 2.5f * u, my - 0.5f * u, 2.5f * u, COL(255, 255, 255));
++    return;
++  }
++  // crystal: diamond
++  c = COL(120, 200, 255);
++  for (float d = 0; d <= 12 * u; d += 1.0f) {
++    float hw = (12 * u - d) * 0.75f;
++    fill_rect(mx - hw - 1.5f * u, my - d, 2 * hw + 3 * u, 1.0f, COL_OUTLINE);
++    fill_rect(mx - hw - 1.5f * u, my + d, 2 * hw + 3 * u, 1.0f, COL_OUTLINE);
++  }
++  for (float d = 0; d <= 10 * u; d += 1.0f) {
++    float hw = (10 * u - d) * 0.75f;
++    fill_rect(mx - hw, my - d, 2 * hw, 1.0f, d < 3 * u ? COL(230, 245, 255) : c);
++    fill_rect(mx - hw, my + d, 2 * hw, 1.0f, c);
++  }
++}
++
++static void draw_objective_markers(bool dark, float ox, float oy, float scale) {
++  int mk[7 * 5];
++  int n = SS_GetMapMarkers(dark, mk, 7);
++  for (int i = 0; i < n; i++) {
++    float mx = ox + (128.0f + mk[i * 5 + 0] / 4096.0f * 256.0f) * scale;
++    float my = oy + (128.0f + mk[i * 5 + 1] / 4096.0f * 256.0f) * scale;
++    draw_marker(mk[i * 5 + 2], mk[i * 5 + 3], mx, my);
++  }
++}
++
+ static void draw_overworld(RectFS r, int link_x, int link_y, int area) {
+   // parchment sheet with gold frame
+   draw_tiled(tex_bg_parch, kSSTexParch_W, kSSTexParch_H, r, COL_BG_PARCH);
+@@ -429,35 +510,27 @@ static void draw_overworld(RectFS r, int link_x, int link_y, int area) {
+   float scale, ox, oy;
+   if (whole_map) {
+     scale = (m.w < m.h ? m.w : m.h) / 512.0f;
+-    ox = m.x + m.w / 2 - 256.0f * scale;
+-    oy = m.y + m.h / 2 - 256.0f * scale;
++    if (scale >= 1.0f) scale = floorf(scale);
++    ox = floorf(m.x + m.w / 2 - 256.0f * scale);
++    oy = floorf(m.y + m.h / 2 - 256.0f * scale);
+   } else {
+-    scale = 2.6f * u;
++    scale = px_scale(2.6f * u);
+     float cxm = clampf(px, m.w / scale / 2, 512.0f - m.w / scale / 2);
+     float cym = clampf(py, m.h / scale / 2, 512.0f - m.h / scale / 2);
+-    ox = m.x + m.w / 2 - cxm * scale;
+-    oy = m.y + m.h / 2 - cym * scale;
++    ox = floorf(m.x + m.w / 2 - cxm * scale);
++    oy = floorf(m.y + m.h / 2 - cym * scale);
+   }
+   SDL_FRect dst = {ox, oy, 512 * scale, 512 * scale};
+   SDL_RenderCopyF(ss_r, map, NULL, &dst);
+ 
+-  // X marks for unclaimed pendants / crystals
+-  const int (*marks)[3] = dark ? kCrystalMarks : kPendantMarks;
+-  int nmarks = dark ? 7 : 3;
+-  int owned = sram8(dark ? 0x7A : 0x74);
+-  for (int i = 0; i < nmarks; i++) {
+-    if (owned & marks[i][0]) continue;
+-    float mx = ox + (128.0f + marks[i][1] / 4096.0f * 256.0f) * scale;
+-    float my = oy + (128.0f + marks[i][2] / 4096.0f * 256.0f) * scale;
+-    draw_x_mark(mx, my, 8 * u, 8 * u, COL_OUTLINE);
+-    draw_x_mark(mx, my, 8 * u, 4.5f * u, COL(224, 40, 32));
+-  }
++  // zelda3-ds: the same objective icons the in-game map shows at this point of the story
++  draw_objective_markers(dark, ox, oy, scale);
+ 
+   // Link's bobbing head
+   float fx = ox + px * scale, fy = oy + py * scale;
+   float bob = sinf(SDL_GetTicks() / 300.0f) * 2 * u;
+-  float fs = (whole_map ? 1.2f : 1.6f) * u * 2;   // face tex is 16px (Java pre-scaled to 32)
+-  SDL_FRect fdst = {fx - 16 * fs / 2, fy - 16 * fs / 2 + bob, 16 * fs, 16 * fs};
++  float fs = px_scale((whole_map ? 1.2f : 1.6f) * u * 2);   // face tex is 16px (Java pre-scaled to 32)
++  SDL_FRect fdst = {floorf(fx - 16 * fs / 2), floorf(fy - 16 * fs / 2 + bob), 16 * fs, 16 * fs};
+   SDL_RenderCopyF(ss_r, tex_face, NULL, &fdst);
+   SDL_RenderSetClipRect(ss_r, NULL);
+ 
+@@ -533,7 +606,8 @@ static void draw_dungeon(RectFS r, int link_x, int link_y, int room, int dungeon
+ 
+   const uint8_t *lay = d->layout[li];
+   float cell = (msize - 24 * u) / 5.0f;
+-  float gx = mx0 + 12 * u, gy = my0 + 12 * u;
++  if (cell >= 16.0f) cell = floorf(cell / 16.0f) * 16.0f;   // whole-pixel scale of the 80x80 floor art
++  float gx = floorf(mx0 + (msize - 5 * cell) / 2), gy = floorf(my0 + (msize - 5 * cell) / 2);
+ 
+   // the floor's rooms with the game's own map tiles
+   static uint32_t floor_buf[80 * 80];
+@@ -891,6 +965,20 @@ static void draw_remap_panel(RectFS r) {
+   }
+ }
+ 
++static void draw_row_text(RectFS *row, const char *label, const char *value, float sc) {
++  float ty = floorf(row->y + row->h / 2 - 4 * px_scale(sc));
++  draw_text(label, row->x + 20 * u, ty, sc);
++  if (value) draw_text(value, row->x + row->w - 20 * u - text_width(value, sc), ty, sc);
++}
++
++static void draw_chevron(RectFS *row) {
++  float ax = row->x + row->w - 36 * u, ay = row->y + row->h / 2;
++  for (float d = 0; d < 14 * u; d += 1.0f) {
++    fill_rect(ax - 8 * u + d, ay - 12 * u + d * 0.857f, 5 * u, 2 * u, COL_GOLD);
++    fill_rect(ax - 8 * u + d, ay + 12 * u - d * 0.857f - 2 * u, 5 * u, 2 * u, COL_GOLD);
++  }
++}
++
+ static void draw_settings(RectFS r) {
+   menu_box(r, COL_BOX_BORDER);
+   if (remap_mode) {
+@@ -899,28 +987,98 @@ static void draw_settings(RectFS r) {
+   }
+   draw_text("SETTINGS", r.x + r.w / 2 - text_width("SETTINGS", 3 * u) / 2, r.y + 18 * u, 3 * u);
+ 
+-  bool ws = SS_IsWidescreen();
+-  bool hud_hidden = SS_IsHudHidden();
+-  static const char *const labels[3] = {"REMAP BUTTONS", "WIDESCREEN", "TOP SCREEN HUD"};
+-  const char *values[3] = {"", ws ? "ON" : "OFF", hud_hidden ? "OFF" : "ON"};
+-  float row_h = 76 * u, gap = 18 * u;
+-  float y0 = r.y + 60 * u;
+-  for (int i = 0; i < 3; i++) {
++  int aspect = SS_GetTopAspect();
++  if (aspect < 0 || aspect > 3) aspect = 0;
++  bool quit_armed = quit_armed_until && SDL_GetTicks() < quit_armed_until;
++  float sc = 2.4f * u;
++  float top = r.y + 56 * u, bottom = r.y + r.h - 18 * u;
++  float gap = 8 * u;
++  float row_h = (bottom - top - gap * (SET_COUNT - 1)) / SET_COUNT;
++  if (row_h > 70 * u) row_h = 70 * u;
++  for (int i = 0; i < SET_COUNT; i++) {
+     RectFS *row = &settings_row_r[i];
+-    *row = (RectFS){r.x + 28 * u, y0 + i * (row_h + gap), r.w - 56 * u, row_h};
+-    draw_settings_row(row, false);
+-    float ty = row->y + row->h / 2 - 12 * u;
+-    draw_text(labels[i], row->x + 22 * u, ty, 3 * u);
+-    if (values[i][0] == 0) {
+-      // chevron for the remap sub-screen
+-      float ax = row->x + row->w - 40 * u, ay = row->y + row->h / 2;
+-      for (float d = 0; d < 14 * u; d += 1.0f) {
+-        fill_rect(ax - 8 * u + d, ay - 12 * u + d * 0.857f, 5 * u, 2 * u, COL_GOLD);
+-        fill_rect(ax - 8 * u + d, ay + 12 * u - d * 0.857f - 2 * u, 5 * u, 2 * u, COL_GOLD);
+-      }
++    *row = (RectFS){r.x + 24 * u, top + i * (row_h + gap), r.w - 48 * u, row_h};
++    if (i == SET_STATES) {
++      float half = (row->w - gap) / 2;
++      save_state_r = (RectFS){row->x, row->y, half, row_h};
++      load_state_r = (RectFS){row->x + half + gap, row->y, half, row_h};
++      draw_settings_row(&save_state_r, false);
++      draw_settings_row(&load_state_r, false);
++      float ty = floorf(row->y + row_h / 2 - 4 * px_scale(sc));
++      draw_text("SAVE STATE", save_state_r.x + half / 2 - text_width("SAVE STATE", sc) / 2, ty, sc);
++      draw_text("LOAD STATE", load_state_r.x + half / 2 - text_width("LOAD STATE", sc) / 2, ty, sc);
++      continue;
++    }
++    draw_settings_row(row, i == SET_QUIT && quit_armed);
++    switch (i) {
++    case SET_ASPECT:   draw_row_text(row, "TOP SCREEN", kAspectLabel[aspect], sc); break;
++    case SET_HUD:      draw_row_text(row, "TOP SCREEN HUD", SS_IsHudHidden() ? "OFF" : "ON", sc); break;
++    case SET_CRT:      draw_row_text(row, "CRT FILTER", SS_IsCrtFilter() ? "ON" : "OFF", sc); break;
++    case SET_AUTOSAVE: draw_row_text(row, "AUTOSAVE ON EXIT", SS_GetAutosave() ? "ON" : "OFF", sc); break;
++    case SET_REMAP:    draw_row_text(row, "REMAP BUTTONS", NULL, sc); draw_chevron(row); break;
++    case SET_QUIT:     draw_row_text(row, quit_armed ? "TAP AGAIN TO QUIT" : "QUIT GAME", NULL, sc); break;
++    }
++  }
++
++  if (toast_text && SDL_GetTicks() < toast_until) {
++    float tw = text_width(toast_text, sc);
++    RectFS t = {r.x + r.w / 2 - tw / 2 - 16 * u, r.y + 14 * u, tw + 32 * u, 8 * px_scale(sc) + 16 * u};
++    fill_round(t.x, t.y, t.w, t.h, 6 * u, COL_GOLD);
++    fill_round(t.x + 2 * u, t.y + 2 * u, t.w - 4 * u, t.h - 4 * u, 5 * u, COL_BOX);
++    draw_text(toast_text, t.x + 16 * u, t.y + 8 * u, sc);
++  }
++}
++
++static void show_toast(const char *text) {
++  toast_text = text;
++  toast_until = SDL_GetTicks() + 1500;
++}
++
++static void settings_tap(float x, float y) {
++  if (in_rect(&save_state_r, x, y)) { SS_SaveLoadState(true);  show_toast("STATE SAVED");  return; }
++  if (in_rect(&load_state_r, x, y)) { SS_SaveLoadState(false); show_toast("STATE LOADED"); return; }
++  int hit = -1;
++  for (int i = 0; i < SET_COUNT; i++)
++    if (i != SET_STATES && in_rect(&settings_row_r[i], x, y)) { hit = i; break; }
++  if (hit != SET_QUIT) quit_armed_until = 0;
++  switch (hit) {
++  case SET_ASPECT: {
++    int next = (SS_GetTopAspect() + 1) % 4;
++    SS_SetTopAspect(next);
++    update_ini("[General]", "TopScreenAspect", kAspectIni[next]);
++    break;
++  }
++  case SET_HUD: {
++    bool hide = !SS_IsHudHidden();
++    SS_SetHudHidden(hide);
++    if (hide) { FILE *f = fopen(".ss_hidehud", "wb"); if (f) fclose(f); }
++    else remove(".ss_hidehud");
++    break;
++  }
++  case SET_CRT: {
++    bool on = !SS_IsCrtFilter();
++    SS_SetCrtFilter(on);
++    update_ini("[Graphics]", "CrtFilter", on ? "1" : "0");
++    break;
++  }
++  case SET_AUTOSAVE: {
++    bool on = !SS_GetAutosave();
++    SS_SetAutosave(on);
++    update_ini("[General]", "Autosave", on ? "1" : "0");
++    break;
++  }
++  case SET_REMAP:
++    SS_GetGamepadControls(pad_controls);
++    remap_mode = true;
++    break;
++  case SET_QUIT:
++    if (quit_armed_until && SDL_GetTicks() < quit_armed_until) {
++      SDL_Event quit = { .type = SDL_QUIT };
++      SDL_PushEvent(&quit);
+     } else {
+-      draw_text(values[i], row->x + row->w - 22 * u - text_width(values[i], 3 * u), ty, 3 * u);
++      quit_armed_until = SDL_GetTicks() + 3000;
+     }
++    break;
+   }
+ }
+ 
+@@ -937,6 +1095,7 @@ static void draw_tab_button(RectFS r, const char *label, bool active) {
+ 
+ static void draw_tab_bar(float tab_h) {
+   float y = H - tab_h + 4 * u;
++  tab_bar_r = (RectFS){0, y - 6 * u, W, H - (y - 6 * u)};
+   float bh = tab_h - 16 * u;
+   float sq = bh;   // square settings button on the right
+   tab_settings_r = (RectFS){W - 8 * u - sq, y, sq, bh};
+@@ -964,6 +1123,8 @@ bool SecondScreenSDL_Init(SDL_Window *main_window) {
+   if (!env || env[0] != '1') return false;
+   main_win = main_window;
+   ss_enabled = true;
++  const char *dbg = SDL_getenv("ZELDA3_TOUCH_DEBUG");
++  touch_debug = dbg && dbg[0] == '1';
+   return true;
+ }
+ 
+@@ -1011,17 +1172,49 @@ static bool ensure_window(void) {
+   if (W <= 0 || H <= 0) { W = 640; H = 480; }
+   u = (W < H ? W : H) / 720.0f;
+   printf("second screen: display %d of %d, %dx%d (u=%.2f)\n", target, n, W, H, u);
++  for (int i = 0; i < n; i++) {
++    SDL_Rect b;
++    float ddpi = 0;
++    SDL_GetDisplayBounds(i, &b);
++    SDL_GetDisplayDPI(i, &ddpi, NULL, NULL);
++    printf("  display %d: %s %dx%d at %d,%d dpi=%.0f\n", i, SDL_GetDisplayName(i), b.w, b.h, b.x, b.y, ddpi);
++  }
++  {
++    int ww, wh;
++    SDL_GetWindowSize(ss_win, &ww, &wh);
++    printf("  window %dx%d, renderer output %dx%d\n", ww, wh, W, H);
++  }
++  fflush(stdout);
+   return true;
+ }
+ 
+ static void handle_tap(float x, float y) {
++  last_tap_x = x; last_tap_y = y;
++  if (touch_debug) {
++    printf("second screen: tap %.0f,%.0f (window %dx%d)\n", x, y, W, H);
++    fflush(stdout);
++  }
+   int module = SS_GetModule() & 0xFF;
+   if (mode_for_module(module) != MODE_GAME || !art_ready) return;
+ 
+-  if (in_rect(&tab_items_r, x, y)) { tab = (tab == TAB_ITEMS) ? TAB_MAP : TAB_ITEMS; leave_remap(); return; }
+-  if (in_rect(&tab_map_r, x, y))   { tab = TAB_MAP; leave_remap(); return; }
+-  if (in_rect(&tab_gear_r, x, y))  { tab = (tab == TAB_GEAR) ? TAB_MAP : TAB_GEAR; leave_remap(); return; }
+-  if (in_rect(&tab_settings_r, x, y)) { tab = (tab == TAB_SETTINGS) ? TAB_MAP : TAB_SETTINGS; leave_remap(); return; }
++  // zelda3-ds: anywhere in the bottom band counts; the button is picked by x,
++  // with the settings cog reaching the right edge of the screen.
++  if (in_rect(&tab_bar_r, x, y)) {
++    const char *which;
++    if (x >= tab_settings_r.x - 4 * u) {
++      tab = (tab == TAB_SETTINGS) ? TAB_MAP : TAB_SETTINGS; which = "settings";
++    } else if (x >= tab_items_r.x - 4 * u) {
++      tab = (tab == TAB_ITEMS) ? TAB_MAP : TAB_ITEMS; which = "items";
++    } else if (x >= tab_map_r.x - 4 * u) {
++      tab = TAB_MAP; which = "map";
++    } else {
++      tab = (tab == TAB_GEAR) ? TAB_MAP : TAB_GEAR; which = "gear";
++    }
++    leave_remap();
++    quit_armed_until = 0;
++    if (touch_debug) printf("second screen: tab %s\n", which);
++    return;
++  }
+ 
+   if (tab == TAB_SETTINGS) {
+     if (remap_mode) {
+@@ -1040,19 +1233,7 @@ static void handle_tap(float x, float y) {
+         }
+       }
+     } else {
+-      if (in_rect(&settings_row_r[0], x, y)) {
+-        SS_GetGamepadControls(pad_controls);
+-        remap_mode = true;
+-      } else if (in_rect(&settings_row_r[1], x, y)) {
+-        bool on = !SS_IsWidescreen();
+-        SS_SetWidescreen(on);
+-        update_ini("[General]", "ExtendedAspectRatio", on ? "16:9" : "4:3");
+-      } else if (in_rect(&settings_row_r[2], x, y)) {
+-        bool hide = !SS_IsHudHidden();
+-        SS_SetHudHidden(hide);
+-        if (hide) { FILE *f = fopen(".ss_hidehud", "wb"); if (f) fclose(f); }
+-        else remove(".ss_hidehud");
+-      }
++      settings_tap(x, y);
+     }
+     return;
+   }
+@@ -1214,6 +1395,10 @@ void SecondScreenSDL_Update(void) {
+ 
+   draw_sidebar(W - side_w + 4 * u, 10 * u, side_w - 14 * u, H - tab_h - 14 * u, dungeon_mode);
+   draw_tab_bar(tab_h);
++  if (touch_debug && last_tap_x >= 0) {
++    fill_rect(last_tap_x - 20, last_tap_y - 1, 40, 3, COL(255, 0, 255));
++    fill_rect(last_tap_x - 1, last_tap_y - 20, 3, 40, COL(255, 0, 255));
++  }
+ 
+   SDL_RenderPresent(ss_r);
+ }

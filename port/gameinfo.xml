@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<gameList>
+  <game>
+    <path>./Zelda3.sh</path>
+    <name>Zelda3 DS</name>
+    <desc>Native port of the reimplementation of The Legend of Zelda: A Link to the Past (snesrev/zelda3), adapted to dual-screen handhelds running ROCKNIX. The top screen shows the game; the bottom screen shows the world map, dungeon map, touch inventory and settings. Requires zelda3_assets.dat generated from your own US ROM.</desc>
+    <image>./zelda3/screenshot.png</image>
+    <thumbnail>./zelda3/cover.png</thumbnail>
+    <releasedate>19911121T000000</releasedate>
+    <developer>Nintendo / snesrev</developer>
+    <publisher>Nintendo</publisher>
+    <genre>Action-Adventure</genre>
+  </game>
+</gameList>

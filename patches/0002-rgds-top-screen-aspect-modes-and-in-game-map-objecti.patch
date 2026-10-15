@@ -1,0 +1,276 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Luna <luna.svalle.02@gmail.com>
+Date: Thu, 15 Oct 2026 18:17:32 +0200
+Subject: [PATCH 2/6] rgds: top screen aspect modes and in-game map objective
+ markers
+
+---
+ app/jni/src/src/config.c        | 11 ++++++++
+ app/jni/src/src/config.h        | 13 +++++++++
+ app/jni/src/src/main.c          | 47 ++++++++++++++++++++++++++++-----
+ app/jni/src/src/messaging.c     | 29 ++++++++++++++++++++
+ app/jni/src/src/messaging.h     |  8 ++++++
+ app/jni/src/src/second_screen.c | 36 +++++++++++++++++++++++++
+ 6 files changed, 138 insertions(+), 6 deletions(-)
+
+diff --git a/app/jni/src/src/config.c b/app/jni/src/src/config.c
+index d87423a..54acd1b 100644
+--- a/app/jni/src/src/config.c
++++ b/app/jni/src/src/config.c
+@@ -1,4 +1,6 @@
+ #include "config.h"
++
++const char *const kTopAspectNames[kTopAspect_Count] = {"original", "stretch", "wide", "pixel"};
+ #include "types.h"
+ #include <stdio.h>
+ #include <string.h>
+@@ -471,6 +473,15 @@ static bool HandleIniConfig(int section, const char *key, char *value) {
+       if (g_config.extended_aspect_ratio && !novis)
+         g_config.features0 |= kFeatures0_WidescreenVisualFixes;
+       return true;
++    } else if (StringEqualsNoCase(key, "TopScreenAspect")) {
++      for (int i = 0; i < kTopAspect_Count; i++) {
++        if (StringEqualsNoCase(value, kTopAspectNames[i])) {
++          g_config.top_aspect = i;
++          g_config.top_aspect_set = true;
++          return true;
++        }
++      }
++      return false;
+     } else if (StringEqualsNoCase(key, "DisplayPerfInTitle")) {
+       return ParseBool(value, &g_config.display_perf_title);
+     } else if (StringEqualsNoCase(key, "DisableFrameDelay")) {
+diff --git a/app/jni/src/src/config.h b/app/jni/src/src/config.h
+index 9453855..88d07bb 100644
+--- a/app/jni/src/src/config.h
++++ b/app/jni/src/src/config.h
+@@ -69,6 +69,9 @@ typedef struct Config {
+   bool disable_frame_delay;
+   uint8 msuvolume;
+   uint32 features0;
++  // zelda3-ds: top screen aspect mode (kTopAspect_*), overrides the options above when set
++  uint8 top_aspect;
++  bool top_aspect_set;
+ 
+   const char *link_graphics;
+   char *memory_buffer;
+@@ -77,6 +80,16 @@ typedef struct Config {
+   const char *language;
+ } Config;
+ 
++// zelda3-ds: how the game picture fills the 4:3 top screen
++enum {
++  kTopAspect_Original,  // square SNES pixels (8:7), black side bars
++  kTopAspect_Stretch,   // stretched to the whole screen, like a 4:3 TV
++  kTopAspect_Wide,      // extra columns rendered so square pixels fill 4:3
++  kTopAspect_Pixel,     // integer scale only, black border
++  kTopAspect_Count,
++};
++extern const char *const kTopAspectNames[kTopAspect_Count];
++
+ enum {
+   kMsuEnabled_Msu = 1,
+   kMsuEnabled_MsuDeluxe = 2,
+diff --git a/app/jni/src/src/main.c b/app/jni/src/src/main.c
+index cc43742..c028c18 100644
+--- a/app/jni/src/src/main.c
++++ b/app/jni/src/src/main.c
+@@ -339,6 +339,7 @@ static bool SdlRenderer_Init(SDL_Window *window) {
+   g_renderer = renderer;
+   if (!g_config.ignore_aspect_ratio)
+     SDL_RenderSetLogicalSize(renderer, g_snes_width, g_snes_height);
++  SDL_RenderSetIntegerScale(renderer, g_config.top_aspect_set && g_config.top_aspect == kTopAspect_Pixel);
+   if (g_config.linear_filtering)
+     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+ 
+@@ -387,16 +388,16 @@ int ZeldaGetSnesHeight(void) {
+   return g_snes_height;
+ }
+ 
+-// Toggle the extended aspect ratio while running (game thread).
+-void ZeldaSetWidescreen(bool enable) {
+-  int extra = enable ? (g_snes_height * 16 / 9 - 256) / 2 : 0;
++// Change the extra columns rendered on each side while running (game thread).
++static void ZeldaSetExtraWidth(int extra) {
+   g_config.extended_aspect_ratio = extra;
+   g_zenv.ppu->extraLeftRight = UintMin(extra, kPpuExtraLeftRight);
+-  if (!enable)
++  if (!extra)
+     PpuSetExtraSideSpace(g_zenv.ppu, 0, 0, 0);
+   g_snes_width = extra * 2 + 256;
+-  if (g_renderer && !g_config.ignore_aspect_ratio)
+-    SDL_RenderSetLogicalSize(g_renderer, g_snes_width, g_snes_height);
++  if (g_renderer)
++    SDL_RenderSetLogicalSize(g_renderer, g_config.ignore_aspect_ratio ? 0 : g_snes_width,
++                             g_config.ignore_aspect_ratio ? 0 : g_snes_height);
+   if (g_texture) {
+     SDL_DestroyTexture(g_texture);
+     int tex_mult = (g_ppu_render_flags & kPpuRenderFlags_4x4Mode7) ? 4 : 1;
+@@ -405,6 +406,32 @@ void ZeldaSetWidescreen(bool enable) {
+   }
+ }
+ 
++void ZeldaSetWidescreen(bool enable) {
++  ZeldaSetExtraWidth(enable ? (g_snes_height * 16 / 9 - 256) / 2 : 0);
++}
++
++// zelda3-ds: extra columns per side so square pixels fill a 4:3 screen
++static int TopAspectExtraWidth(int mode, int snes_height) {
++  return mode == kTopAspect_Wide ? (snes_height * 4 / 3 - 256) / 2 : 0;
++}
++
++// zelda3-ds: switch the top screen aspect mode while running (game thread).
++void ZeldaSetTopAspect(int mode) {
++  if (mode < 0 || mode >= kTopAspect_Count) return;
++  g_config.top_aspect = mode;
++  g_config.top_aspect_set = true;
++  g_config.ignore_aspect_ratio = mode == kTopAspect_Stretch;
++  ZeldaSetExtraWidth(TopAspectExtraWidth(mode, g_snes_height));
++  if (g_renderer)
++    SDL_RenderSetIntegerScale(g_renderer, mode == kTopAspect_Pixel);
++}
++
++int ZeldaGetTopAspect(void) {
++  if (g_config.top_aspect_set) return g_config.top_aspect;
++  if (g_config.ignore_aspect_ratio) return kTopAspect_Stretch;
++  return g_config.extended_aspect_ratio ? kTopAspect_Wide : kTopAspect_Original;
++}
++
+ static const struct RendererFuncs kSdlRendererFuncs  = {
+   &SdlRenderer_Init,
+   &SdlRenderer_Destroy,
+@@ -430,6 +457,14 @@ int main(int argc, char** argv) {
+   LoadLinkGraphics();
+ 
+   ZeldaInitialize();
++  if (g_config.top_aspect_set) {
++    int h = g_config.extend_y ? 240 : 224;
++    g_config.ignore_aspect_ratio = g_config.top_aspect == kTopAspect_Stretch;
++    g_config.extended_aspect_ratio = TopAspectExtraWidth(g_config.top_aspect, h);
++    uint32 wide_bits = kFeatures0_ExtendScreen64 | kFeatures0_WidescreenVisualFixes;
++    g_config.features0 = g_config.extended_aspect_ratio ? (g_config.features0 | wide_bits)
++                                                        : (g_config.features0 & ~wide_bits);
++  }
+   g_zenv.ppu->extraLeftRight = UintMin(g_config.extended_aspect_ratio, kPpuExtraLeftRight);
+   g_snes_width = (g_config.extended_aspect_ratio * 2 + 256);
+   g_snes_height = (g_config.extend_y ? 240 : 224);
+diff --git a/app/jni/src/src/messaging.c b/app/jni/src/src/messaging.c
+index f65d31f..be4b204 100644
+--- a/app/jni/src/src/messaging.c
++++ b/app/jni/src/src/messaging.c
+@@ -1514,6 +1514,35 @@ static void WorldMap_AddSprite(int spr, uint8 big, uint8 flags, uint8 ch, uint16
+   SetOamPlain(&oam_buf[spr], x, y, ch, flags, big);
+ }
+ 
++// zelda3-ds: the objective icons the in-game world map would draw, with the same
++// rules as WorldMap_HandleSprites, for the second screen. Positions are overworld
++// pixel coordinates (0..4095, like link_x_coord). Returns how many were written.
++int WorldMap_GetObjectiveMarkers(bool dark_world, WorldMapMarker *out, int cap) {
++  static const uint16 *const kXs[7] = {kOwMapCrystal0_x, kOwMapCrystal1_x, kOwMapCrystal2_x, kOwMapCrystal3_x,
++                                       kOwMapCrystal4_x, kOwMapCrystal5_x, kOwMapCrystal6_x};
++  static const uint16 *const kYs[7] = {kOwMapCrystal0_y, kOwMapCrystal1_y, kOwMapCrystal2_y, kOwMapCrystal3_y,
++                                       kOwMapCrystal4_y, kOwMapCrystal5_y, kOwMapCrystal6_y};
++  static const uint16 *const kTabs[7] = {kOwMapCrystal0_tab, kOwMapCrystal1_tab, kOwMapCrystal2_tab, kOwMapCrystal3_tab,
++                                         kOwMapCrystal4_tab, kOwMapCrystal5_tab, kOwMapCrystal6_tab};
++  int k = savegame_map_icons_indicator;
++  if (k > 8 || save_ow_event_info[0x5b] & 0x20 || ((k >= 6) != dark_world))
++    return 0;
++  int n = 0;
++  for (int i = 0; i < 7 && n < cap; i++) {
++    if (i < 3 && OverworldMap_CheckForPendant(i))
++      continue;
++    if (OverworldMap_CheckForCrystal(i) || sign16(kXs[i][k]))
++      continue;
++    out[n].x = kXs[i][k];
++    out[n].y = kYs[i][k];
++    out[n].icon = kTabs[i][k] >> 8;   // 0 = blinking X, else the map sprite tile
++    out[n].index = i;
++    out[n].stage = k;
++    n++;
++  }
++  return n;
++}
++
+ bool OverworldMap_CheckForPendant(int k) {  // 8ac5a9
+   return (savegame_map_icons_indicator == 3) && (link_which_pendants & kPendantBitMask[k]) != 0;
+ }
+diff --git a/app/jni/src/src/messaging.h b/app/jni/src/src/messaging.h
+index a87f33e..2e20446 100644
+--- a/app/jni/src/src/messaging.h
++++ b/app/jni/src/src/messaging.h
+@@ -4,6 +4,14 @@
+ const uint8 *GetDungmapFloorLayout();
+ uint8 GetOtherDungmapInfo(int count);
+ const uint16 *GetDungmapRoomShape(int idx);
++typedef struct WorldMapMarker {
++  uint16 x, y;   // overworld pixel coordinates
++  uint8 icon;    // 0 = blinking X; 0x60 pendant, 0x62 Master Sword, 0x64 crystal, 0x66 tower
++  uint8 index;   // marker slot (pendant/crystal number)
++  uint8 stage;   // savegame_map_icons_indicator
++} WorldMapMarker;
++int WorldMap_GetObjectiveMarkers(bool dark_world, WorldMapMarker *out, int cap);
++
+ void DungMap_4();
+ void Module_Messaging_6();
+ void OverworldMap_SetupHdma();
+diff --git a/app/jni/src/src/second_screen.c b/app/jni/src/src/second_screen.c
+index b04c81c..52c0e92 100644
+--- a/app/jni/src/src/second_screen.c
++++ b/app/jni/src/src/second_screen.c
+@@ -425,6 +425,7 @@ bool SS_RenderMapIcons(int palace, uint32 *px) {
+ static volatile int g_pending_equip_slot;
+ static volatile int g_pending_assign_x_slot;
+ static volatile int g_pending_widescreen = -1;
++static volatile int g_pending_top_aspect = -1;   // zelda3-ds
+ static volatile int g_pending_crt_filter = -1;
+ static volatile int g_pending_hide_hud = -1;
+ static volatile int g_pending_controls_set;
+@@ -461,6 +462,34 @@ bool SS_IsWidescreen(void) {
+   return g_zenv.ppu && g_zenv.ppu->extraLeftRight != 0;
+ }
+ 
++// zelda3-ds: top screen aspect mode (kTopAspect_*), applied on the game thread.
++void SS_SetTopAspect(int mode) {
++  if (mode >= 0 && mode < kTopAspect_Count) g_pending_top_aspect = mode;
++}
++
++int SS_GetTopAspect(void) {
++  int pending = g_pending_top_aspect;
++  if (pending >= 0) return pending;
++  extern int ZeldaGetTopAspect(void);
++  return ZeldaGetTopAspect();
++}
++
++bool SS_GetAutosave(void) { return g_config.autosave; }
++
++// zelda3-ds: in-game world map objective markers (see WorldMap_GetObjectiveMarkers).
++int SS_GetMapMarkers(bool dark_world, int *out, int cap) {
++  WorldMapMarker m[7];
++  int n = WorldMap_GetObjectiveMarkers(dark_world, m, cap < 7 ? cap : 7);
++  for (int i = 0; i < n; i++) {
++    out[i * 5 + 0] = m[i].x;
++    out[i * 5 + 1] = m[i].y;
++    out[i * 5 + 2] = m[i].icon;
++    out[i * 5 + 3] = m[i].index;
++    out[i * 5 + 4] = m[i].stage;
++  }
++  return n;
++}
++
+ void SS_SetCrtFilter(bool on) { g_pending_crt_filter = on ? 1 : 0; }
+ 
+ bool SS_IsCrtFilter(void) {
+@@ -591,6 +620,13 @@ void SecondScreen_RunFrameHook(void) {
+     extern void ZeldaSetWidescreen(bool enable);
+     ZeldaSetWidescreen(ws != 0);
+   }
++  int ta = g_pending_top_aspect;
++  if (ta >= 0) {
++    g_pending_top_aspect = -1;
++    extern void ZeldaSetTopAspect(int mode);
++    ZeldaSetTopAspect(ta);
++    SS_SetFeature(kFeatures0_ExtendScreen64 | kFeatures0_WidescreenVisualFixes, ta == kTopAspect_Wide);
++  }
+   int crt = g_pending_crt_filter;
+   if (crt >= 0) {
+     g_pending_crt_filter = -1;

@@ -1,0 +1,196 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Luna <luna.svalle.02@gmail.com>
+Date: Thu, 15 Oct 2026 18:50:36 +0200
+Subject: [PATCH 5/6] rgds: GPU-rendered bottom screen with OutputMethod SDL
+ and performance logging
+
+---
+ app/jni/src/src/main.c                        | 62 +++++++++++++++++++
+ .../src/platform/linux/second_screen_sdl.c    | 40 ++++++++++--
+ 2 files changed, 98 insertions(+), 4 deletions(-)
+
+diff --git a/app/jni/src/src/main.c b/app/jni/src/src/main.c
+index c028c18..a79a593 100644
+--- a/app/jni/src/src/main.c
++++ b/app/jni/src/src/main.c
+@@ -152,6 +152,34 @@ static SDL_HitTestResult HitTestCallback(SDL_Window *win, const SDL_Point *pt, v
+   return SDL_HITTEST_NORMAL;
+ }
+ 
++// zelda3-ds: ZELDA3_PERF_LOG=1 prints frame timings to stdout (log.txt) every ~5 s.
++static bool g_perf_log;
++static double g_perf_ppu_ms;  // ZeldaDrawPpuFrame of the last drawn frame
++static struct {
++  uint64 last_loop;
++  double emu, ppu, present, bottom, worst;
++  int frames, drawn, slow;
++  uint32 since;
++} g_perf;
++
++static double PerfMs(uint64 a, uint64 b) {
++  return (double)(b - a) * 1000.0 / (double)SDL_GetPerformanceFrequency();
++}
++
++static void PerfReport(uint64 now) {
++  if (!g_perf.since) g_perf.since = SDL_GetTicks();
++  uint32 el = SDL_GetTicks() - g_perf.since;
++  if (el < 5000 || !g_perf.frames) return;
++  int d = g_perf.drawn ? g_perf.drawn : 1;
++  printf("perf: %.1f fps | emu %.2f ms | ppu %.2f | present %.2f | bottom %.2f | worst frame %.1f ms | >20ms: %d/%d\n",
++         g_perf.frames * 1000.0 / el, g_perf.emu / g_perf.frames, g_perf.ppu / d, g_perf.present / d,
++         g_perf.bottom / d, g_perf.worst, g_perf.slow, g_perf.frames);
++  fflush(stdout);
++  memset(&g_perf, 0, sizeof(g_perf));
++  g_perf.since = SDL_GetTicks();
++  g_perf.last_loop = now;
++}
++
+ static void DrawPpuFrameWithPerf() {
+   int render_scale = PpuGetCurrentRenderScale(g_zenv.ppu, g_ppu_render_flags);
+   uint8 *pixel_buffer = 0;
+@@ -171,6 +199,10 @@ static void DrawPpuFrameWithPerf() {
+     history[history_pos] = v;
+     history_pos = (history_pos + 1) & 63;
+     g_curr_fps = average * (1.0f / 64);
++  } else if (g_perf_log) {
++    uint64 before = SDL_GetPerformanceCounter();
++    ZeldaDrawPpuFrame(pixel_buffer, pitch, g_ppu_render_flags);
++    g_perf_ppu_ms = PerfMs(before, SDL_GetPerformanceCounter());
+   } else {
+     ZeldaDrawPpuFrame(pixel_buffer, pitch, g_ppu_render_flags);
+   }
+@@ -330,6 +362,9 @@ static bool SdlRenderer_Init(SDL_Window *window) {
+   }
+   SDL_RendererInfo renderer_info;
+   SDL_GetRendererInfo(renderer, &renderer_info);
++  printf("top screen: SDL renderer '%s'%s%s\n", renderer_info.name,
++         (renderer_info.flags & SDL_RENDERER_ACCELERATED) ? " accelerated" : " software",
++         (renderer_info.flags & SDL_RENDERER_PRESENTVSYNC) ? " vsync" : "");
+   if (kDebugFlag) {
+     printf("Supported texture formats:");
+     for (int i = 0; i < renderer_info.num_texture_formats; i++)
+@@ -568,6 +603,10 @@ int main(int argc, char** argv) {
+ 
+   bool running = true;
+   SDL_Event event;
++  {
++    const char *pl = SDL_getenv("ZELDA3_PERF_LOG");
++    g_perf_log = pl && pl[0] == '1';
++  }
+   uint32 lastTick = SDL_GetTicks();
+   uint32 curTick = 0;
+   uint32 frameCtr = 0;
+@@ -638,10 +677,24 @@ int main(int argc, char** argv) {
+     extern void SecondScreen_RunFrameHook(void);
+     SecondScreen_RunFrameHook();
+ 
++    uint64 perf_t0 = g_perf_log ? SDL_GetPerformanceCounter() : 0;
++    if (g_perf_log) {
++      if (g_perf.last_loop) {
++        double loop_ms = PerfMs(g_perf.last_loop, perf_t0);
++        if (loop_ms > g_perf.worst) g_perf.worst = loop_ms;
++        if (loop_ms > 20.0) g_perf.slow++;
++        g_perf.frames++;
++      }
++      g_perf.last_loop = perf_t0;
++    }
++
+     SDL_LockMutex(g_audio_mutex);
+     bool is_replay = ZeldaRunFrame(inputs);
+     SDL_UnlockMutex(g_audio_mutex);
+ 
++    uint64 perf_t1 = g_perf_log ? SDL_GetPerformanceCounter() : 0;
++    if (g_perf_log) g_perf.emu += PerfMs(perf_t0, perf_t1);
++
+     frameCtr++;
+ 
+     if ((g_turbo ^ (is_replay & g_replay_turbo)) && (frameCtr & (g_turbo ? 0xf : 0x7f)) != 0) {
+@@ -649,7 +702,16 @@ int main(int argc, char** argv) {
+     }
+ 
+     DrawPpuFrameWithPerf();
++    uint64 perf_t2 = g_perf_log ? SDL_GetPerformanceCounter() : 0;
+     SecondScreenSDL_Update();
++    if (g_perf_log) {
++      uint64 perf_t3 = SDL_GetPerformanceCounter();
++      g_perf.drawn++;
++      g_perf.ppu += g_perf_ppu_ms;
++      g_perf.present += PerfMs(perf_t1, perf_t2) - g_perf_ppu_ms;
++      g_perf.bottom += PerfMs(perf_t2, perf_t3);
++      PerfReport(perf_t3);
++    }
+ 
+     if (g_config.display_perf_title) {
+       char title[60];
+diff --git a/app/jni/src/src/platform/linux/second_screen_sdl.c b/app/jni/src/src/platform/linux/second_screen_sdl.c
+index 7e9c789..802b10e 100644
+--- a/app/jni/src/src/platform/linux/second_screen_sdl.c
++++ b/app/jni/src/src/platform/linux/second_screen_sdl.c
+@@ -7,8 +7,8 @@
+ // Enabled with ZELDA3_SECOND_SCREEN=1. The window opens fullscreen on the
+ // second display when there is one; ZELDA3_SECOND_SCREEN_DISPLAY=n picks a
+ // display and ZELDA3_SECOND_SCREEN_TITLE overrides the window title for
+-// systems that route windows by title. Software renderer so it can't fight
+-// the game's GL context.
++// systems that route windows by title. GPU renderer when the game also uses an
++// SDL renderer, software otherwise (see create_ss_renderer).
+ #include <SDL.h>
+ #include <math.h>
+ #include <stdbool.h>
+@@ -1128,6 +1128,38 @@ static void draw_tab_bar(float tab_h) {
+ // public API
+ 
+ static SDL_Window *main_win;
++
++// zelda3-ds: draw the bottom screen on the GPU when the game itself uses an
++// accelerated SDL renderer (OutputMethod = SDL): both are SDL renderers, so SDL
++// switches their GL contexts itself. With OutputMethod OpenGL / OpenGL ES the
++// game owns a raw GL context and the bottom stays on the software renderer.
++// ZELDA3_SECOND_SCREEN_RENDERER=software|accelerated overrides the choice.
++// No vsync here: the game's present already paces the frame.
++static SDL_Renderer *create_ss_renderer(void) {
++  bool accel = false;
++  SDL_Renderer *mr = main_win ? SDL_GetRenderer(main_win) : NULL;
++  SDL_RendererInfo mi;
++  if (mr && SDL_GetRendererInfo(mr, &mi) == 0 && (mi.flags & SDL_RENDERER_ACCELERATED))
++    accel = true;
++  const char *env = SDL_getenv("ZELDA3_SECOND_SCREEN_RENDERER");
++  if (env && !SDL_strcasecmp(env, "software")) accel = false;
++  else if (env && !SDL_strcasecmp(env, "accelerated")) accel = true;
++
++  SDL_Renderer *r = NULL;
++  if (accel) {
++    r = SDL_CreateRenderer(ss_win, -1, SDL_RENDERER_ACCELERATED);
++    if (!r) fprintf(stderr, "second screen: accelerated renderer failed (%s), using software\n", SDL_GetError());
++  }
++  if (!r) r = SDL_CreateRenderer(ss_win, -1, SDL_RENDERER_SOFTWARE);
++  if (r) {
++    SDL_RendererInfo ri;
++    SDL_GetRendererInfo(r, &ri);
++    printf("second screen: SDL renderer '%s'%s\n", ri.name,
++           (ri.flags & SDL_RENDERER_ACCELERATED) ? " accelerated" : " software");
++    fflush(stdout);
++  }
++  return r;
++}
+ static bool ss_enabled;
+ 
+ bool SecondScreenSDL_Init(SDL_Window *main_window) {
+@@ -1172,7 +1204,7 @@ static bool ensure_window(void) {
+     ss_enabled = false;
+     return false;
+   }
+-  ss_r = SDL_CreateRenderer(ss_win, -1, SDL_RENDERER_SOFTWARE);
++  ss_r = create_ss_renderer();
+   if (!ss_r) {
+     fprintf(stderr, "second screen: CreateRenderer failed: %s\n", SDL_GetError());
+     SDL_DestroyWindow(ss_win); ss_win = NULL;
+@@ -1431,7 +1463,7 @@ static void destroy_textures(void) {
+ static void rebuild_renderer(int w2, int h2) {
+   destroy_textures();
+   if (ss_r) SDL_DestroyRenderer(ss_r);
+-  ss_r = SDL_CreateRenderer(ss_win, -1, SDL_RENDERER_SOFTWARE);
++  ss_r = create_ss_renderer();
+   if (!ss_r) {
+     fprintf(stderr, "second screen: renderer rebuild failed: %s\n", SDL_GetError());
+     SDL_DestroyWindow(ss_win); ss_win = NULL;

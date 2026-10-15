@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Luna <luna.svalle.02@gmail.com>
+Date: Thu, 15 Oct 2026 18:17:32 +0200
+Subject: [PATCH 1/6] rgds: exit with L1 + Start + Select
+
+---
+ app/jni/src/src/main.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/app/jni/src/src/main.c b/app/jni/src/src/main.c
+index 70e931f..cc43742 100644
+--- a/app/jni/src/src/main.c
++++ b/app/jni/src/src/main.c
+@@ -842,6 +842,13 @@ static void HandleGamepadInput(int button, bool pressed) {
+   if (!!(g_gamepad_modifiers & (1 << button)) == pressed)
+     return;
+   g_gamepad_modifiers ^= 1 << button;
++  // zelda3-ds: L1 + Start + Select closes the port, like other ROCKNIX ports.
++  enum { kExitCombo = 1 << kGamepadBtn_L1 | 1 << kGamepadBtn_Start | 1 << kGamepadBtn_Back };
++  if (pressed && (g_gamepad_modifiers & kExitCombo) == kExitCombo) {
++    SDL_Event quit = { .type = SDL_QUIT };
++    SDL_PushEvent(&quit);
++    return;
++  }
+   if (pressed)
+     g_gamepad_last_cmd[button] = FindCmdForGamepadButton(button, g_gamepad_modifiers);
+   if (g_gamepad_last_cmd[button] != 0)

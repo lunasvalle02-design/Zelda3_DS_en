@@ -1,0 +1,17 @@
+# Upstream sources (regenerated with `make fetch`)
+/external/
+# Build output
+/build/
+/dist/
+# Copyrighted material: never commit
+/rom/*
+!/rom/README.md
+*.sfc
+*.smc
+zelda3_assets.dat
+*.pcm
+*.opuz
+# Miscellaneous
+log.txt
+saves/
+.vscode/

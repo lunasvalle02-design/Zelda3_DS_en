@@ -1,0 +1,277 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Luna <luna.svalle.02@gmail.com>
+Date: Thu, 15 Oct 2026 19:07:07 +0200
+Subject: [PATCH 6/6] rgds: ROCKNIX suspend integration (logind PrepareForSleep
+ + delay inhibitor)
+
+---
+ app/jni/src/src/main.c                        |  33 ++++
+ .../src/src/platform/linux/rocknix_sleep.c    | 172 ++++++++++++++++++
+ .../src/src/platform/linux/rocknix_sleep.h    |  14 ++
+ 3 files changed, 219 insertions(+)
+ create mode 100644 app/jni/src/src/platform/linux/rocknix_sleep.c
+ create mode 100644 app/jni/src/src/platform/linux/rocknix_sleep.h
+
+diff --git a/app/jni/src/src/main.c b/app/jni/src/src/main.c
+index a79a593..f3405e7 100644
+--- a/app/jni/src/src/main.c
++++ b/app/jni/src/src/main.c
+@@ -28,6 +28,10 @@
+ #include "util.h"
+ #include "audio.h"
+ #include "android_logging.h"
++#if defined(__linux__) && !defined(__ANDROID__)
++#define ZELDA3_ROCKNIX_SLEEP 1
++#include "platform/linux/rocknix_sleep.h"
++#endif
+ 
+ static bool g_run_without_emu = 0;
+ 
+@@ -607,6 +611,9 @@ int main(int argc, char** argv) {
+     const char *pl = SDL_getenv("ZELDA3_PERF_LOG");
+     g_perf_log = pl && pl[0] == '1';
+   }
++#ifdef ZELDA3_ROCKNIX_SLEEP
++  RocknixSleep_Init();
++#endif
+   uint32 lastTick = SDL_GetTicks();
+   uint32 curTick = 0;
+   uint32 frameCtr = 0;
+@@ -657,6 +664,29 @@ int main(int argc, char** argv) {
+       }
+     }
+ 
++#ifdef ZELDA3_ROCKNIX_SLEEP
++    // zelda3-ds: ROCKNIX is about to suspend (power key / lid): stop the sound and,
++    // with Autosave on, write the state that will be loaded on the next start, in
++    // case the battery runs out while asleep. Then let logind go ahead.
++    switch (RocknixSleep_Poll()) {
++    case kRocknixSleep_GoingToSleep:
++      printf("suspend: going to sleep\n");
++      if (device)
++        SDL_PauseAudioDevice(device, 1);
++      if (g_config.autosave)
++        HandleCommand(kKeys_Save + 0, true);
++      fflush(stdout);
++      RocknixSleep_Ready();
++      break;
++    case kRocknixSleep_Resumed:
++      printf("suspend: resumed\n");
++      fflush(stdout);
++      lastTick = SDL_GetTicks();   // don't try to catch up on the time spent asleep
++      if (device && !g_paused)
++        SDL_PauseAudioDevice(device, 0);
++      break;
++    }
++#endif
+     if (g_paused != audiopaused) {
+       audiopaused = g_paused;
+       if (device)
+@@ -754,6 +784,9 @@ int main(int argc, char** argv) {
+   g_renderer_funcs.Destroy();
+ 
+   SecondScreenSDL_Shutdown();
++#ifdef ZELDA3_ROCKNIX_SLEEP
++  RocknixSleep_Shutdown();
++#endif
+   SDL_DestroyWindow(window);
+   SDL_Quit();
+   //SaveConfigFile();
+diff --git a/app/jni/src/src/platform/linux/rocknix_sleep.c b/app/jni/src/src/platform/linux/rocknix_sleep.c
+new file mode 100644
+index 0000000..3fded34
+--- /dev/null
++++ b/app/jni/src/src/platform/linux/rocknix_sleep.c
+@@ -0,0 +1,172 @@
++// zelda3-ds: suspend integration for ROCKNIX (systemd-logind).
++//
++// ROCKNIX suspends through logind (power key, closing the RG DS lid) and its
++// system-sleep hook freezes games.slice, where ports run. We hold a logind
++// "delay" inhibitor and listen for PrepareForSleep, so the game gets a moment
++// to pause audio and write its autosave state before it is frozen; on resume
++// the inhibitor is taken again.
++//
++// libdbus-1 is loaded with dlopen (SDL2 does the same), so the binary has no
++// hard dependency on it: without D-Bus or logind this module just stays off.
++#include <dlfcn.h>
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <unistd.h>
++
++#include "rocknix_sleep.h"
++
++typedef struct DBusConnection DBusConnection;
++typedef struct DBusMessage DBusMessage;
++typedef uint32_t dbus_bool_t;
++typedef struct {
++  const char *name;
++  const char *message;
++  unsigned int dummy1 : 1, dummy2 : 1, dummy3 : 1, dummy4 : 1, dummy5 : 1;
++  void *padding1;
++} DBusError;
++
++enum { kDBusBusSystem = 1 };
++enum { kDBusTypeInvalid = 0, kDBusTypeBoolean = 'b', kDBusTypeString = 's', kDBusTypeUnixFd = 'h' };
++
++static struct {
++  void (*error_init)(DBusError *);
++  void (*error_free)(DBusError *);
++  dbus_bool_t (*error_is_set)(const DBusError *);
++  DBusConnection *(*bus_get_private)(int, DBusError *);
++  void (*set_exit_on_disconnect)(DBusConnection *, dbus_bool_t);
++  void (*bus_add_match)(DBusConnection *, const char *, DBusError *);
++  DBusMessage *(*new_method_call)(const char *, const char *, const char *, const char *);
++  dbus_bool_t (*append_args)(DBusMessage *, int, ...);
++  DBusMessage *(*send_with_reply_and_block)(DBusConnection *, DBusMessage *, int, DBusError *);
++  dbus_bool_t (*get_args)(DBusMessage *, DBusError *, int, ...);
++  void (*message_unref)(DBusMessage *);
++  dbus_bool_t (*read_write)(DBusConnection *, int);
++  DBusMessage *(*pop_message)(DBusConnection *);
++  dbus_bool_t (*is_signal)(DBusMessage *, const char *, const char *);
++  void (*connection_close)(DBusConnection *);
++  void (*connection_unref)(DBusConnection *);
++} d;
++
++static void *g_lib;
++static DBusConnection *g_conn;
++static int g_inhibit_fd = -1;
++
++static bool load_libdbus(void) {
++  g_lib = dlopen("libdbus-1.so.3", RTLD_NOW | RTLD_LOCAL);
++  if (!g_lib) return false;
++#define SYM(field, name) if (!(*(void **)&d.field = dlsym(g_lib, name))) return false
++  SYM(error_init, "dbus_error_init");
++  SYM(error_free, "dbus_error_free");
++  SYM(error_is_set, "dbus_error_is_set");
++  SYM(bus_get_private, "dbus_bus_get_private");
++  SYM(set_exit_on_disconnect, "dbus_connection_set_exit_on_disconnect");
++  SYM(bus_add_match, "dbus_bus_add_match");
++  SYM(new_method_call, "dbus_message_new_method_call");
++  SYM(append_args, "dbus_message_append_args");
++  SYM(send_with_reply_and_block, "dbus_connection_send_with_reply_and_block");
++  SYM(get_args, "dbus_message_get_args");
++  SYM(message_unref, "dbus_message_unref");
++  SYM(read_write, "dbus_connection_read_write");
++  SYM(pop_message, "dbus_connection_pop_message");
++  SYM(is_signal, "dbus_message_is_signal");
++  SYM(connection_close, "dbus_connection_close");
++  SYM(connection_unref, "dbus_connection_unref");
++#undef SYM
++  return true;
++}
++
++// logind Inhibit("sleep", who, why, "delay") -> fd; the lock lasts while it's open.
++static void take_inhibitor(void) {
++  if (!g_conn || g_inhibit_fd >= 0) return;
++  DBusMessage *m = d.new_method_call("org.freedesktop.login1", "/org/freedesktop/login1",
++                                     "org.freedesktop.login1.Manager", "Inhibit");
++  if (!m) return;
++  const char *what = "sleep", *who = "Zelda3 DS", *why = "Save state before suspending", *mode = "delay";
++  d.append_args(m, kDBusTypeString, &what, kDBusTypeString, &who, kDBusTypeString, &why,
++                kDBusTypeString, &mode, kDBusTypeInvalid);
++  DBusError err;
++  d.error_init(&err);
++  DBusMessage *reply = d.send_with_reply_and_block(g_conn, m, 1000, &err);
++  d.message_unref(m);
++  if (!reply) {
++    printf("suspend: logind Inhibit failed: %s\n", d.error_is_set(&err) ? err.message : "?");
++    d.error_free(&err);
++    return;
++  }
++  int fd = -1;
++  if (d.get_args(reply, &err, kDBusTypeUnixFd, &fd, kDBusTypeInvalid))
++    g_inhibit_fd = fd;
++  else
++    d.error_free(&err);
++  d.message_unref(reply);
++}
++
++static void release_inhibitor(void) {
++  if (g_inhibit_fd >= 0) {
++    close(g_inhibit_fd);
++    g_inhibit_fd = -1;
++  }
++}
++
++bool RocknixSleep_Init(void) {
++  if (!load_libdbus()) {
++    printf("suspend: libdbus-1 not available, suspend integration off\n");
++    return false;
++  }
++  DBusError err;
++  d.error_init(&err);
++  g_conn = d.bus_get_private(kDBusBusSystem, &err);
++  if (!g_conn) {
++    printf("suspend: no system bus (%s), suspend integration off\n", d.error_is_set(&err) ? err.message : "?");
++    d.error_free(&err);
++    return false;
++  }
++  d.set_exit_on_disconnect(g_conn, 0);   // never let a bus hiccup kill the game
++  d.bus_add_match(g_conn, "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'", &err);
++  if (d.error_is_set(&err)) {
++    printf("suspend: AddMatch failed: %s\n", err.message);
++    d.error_free(&err);
++    RocknixSleep_Shutdown();
++    return false;
++  }
++  take_inhibitor();
++  printf("suspend: logind integration %s\n", g_inhibit_fd >= 0 ? "on (delay inhibitor held)" : "on (no inhibitor)");
++  fflush(stdout);
++  return true;
++}
++
++int RocknixSleep_Poll(void) {
++  if (!g_conn) return kRocknixSleep_None;
++  int result = kRocknixSleep_None;
++  d.read_write(g_conn, 0);
++  DBusMessage *msg;
++  while ((msg = d.pop_message(g_conn)) != NULL) {
++    if (d.is_signal(msg, "org.freedesktop.login1.Manager", "PrepareForSleep")) {
++      DBusError err;
++      d.error_init(&err);
++      dbus_bool_t start = 0;
++      if (d.get_args(msg, &err, kDBusTypeBoolean, &start, kDBusTypeInvalid))
++        result = start ? kRocknixSleep_GoingToSleep : kRocknixSleep_Resumed;
++      else
++        d.error_free(&err);
++    }
++    d.message_unref(msg);
++  }
++  if (result == kRocknixSleep_Resumed)
++    take_inhibitor();
++  return result;
++}
++
++void RocknixSleep_Ready(void) {
++  release_inhibitor();   // logind proceeds with the suspend once every delay lock is gone
++}
++
++void RocknixSleep_Shutdown(void) {
++  release_inhibitor();
++  if (g_conn) {
++    d.connection_close(g_conn);
++    d.connection_unref(g_conn);
++    g_conn = NULL;
++  }
++}
+diff --git a/app/jni/src/src/platform/linux/rocknix_sleep.h b/app/jni/src/src/platform/linux/rocknix_sleep.h
+new file mode 100644
+index 0000000..a88fbb8
+--- /dev/null
++++ b/app/jni/src/src/platform/linux/rocknix_sleep.h
+@@ -0,0 +1,14 @@
++// zelda3-ds: suspend integration for ROCKNIX (systemd-logind), see rocknix_sleep.c
++#pragma once
++#include <stdbool.h>
++
++enum {
++  kRocknixSleep_None,
++  kRocknixSleep_GoingToSleep,  // save now, then call RocknixSleep_Ready()
++  kRocknixSleep_Resumed,
++};
++
++bool RocknixSleep_Init(void);
++int RocknixSleep_Poll(void);
++void RocknixSleep_Ready(void);
++void RocknixSleep_Shutdown(void);
