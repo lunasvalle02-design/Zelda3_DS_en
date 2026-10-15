@@ -15,3 +15,5 @@ zelda3_assets.dat
 log.txt
 saves/
 .vscode/
+# Python caches (tools/lang)
+__pycache__/

@@ -127,6 +127,27 @@ binary has no hard dependency on it.
 Tested against a mock logind on a private bus: the lock is released about 40 ms after the
 notification and taken again on resume.
 
+### `0007` — Languages
+
+- `src/i18n.c` lists the languages compiled into `zelda3_assets.dat` (`kDialogueMap`) and loads
+  the interface texts of the selected one from `lang/<code>.ini`. `I18n_SetLanguage` can run
+  between frames: `messaging.c` keeps the encoding and font each message was decoded with, so a
+  box already on screen is not garbled.
+- Translations use the EU text encoding (127 character codes), so a language can add up to 28
+  glyphs (codes 99–126) to the US font. `tools/lang/build_assets.py` draws them from the US
+  letters of the ROM, wraps the dialogue to the 168 px text box and validates it.
+- Pause menu: item names, "DO" ability words and box headers are rebuilt from the HUD letter
+  tiles (A–Z). The small graphic labels `ITEM`, `DO` and `-LIFE-` stay as they are.
+- File select: `nmi.c` and `select_file.c` pass their stripe lists through
+  `I18n_TranslateStripes`, which rewrites rows drawn with the 8×16 font by matching their English
+  text.
+- Bottom screen: all texts go through `I18n_Get`; `draw_text` decodes UTF-8 and draws accented
+  capitals with their diacritic.
+- Not translated: the title logo, the staff credits of the ending and other text that exists
+  only as graphics.
+
+See [`lang/README.md`](../lang/README.md) for the translation format.
+
 ## Measured performance
 
 *2026-10-15 · RG DS Plus · `OutputMethod = SDL` · GPU-rendered bottom screen*

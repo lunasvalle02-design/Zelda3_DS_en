@@ -49,6 +49,7 @@ for Linux. This repository adds the build tooling, device-specific patches and R
 - 📐 **Four aspect modes** for the top screen: `ORIGINAL`, `STRETCH`, `WIDE` (extra columns rendered by the engine, no distortion) and `PIXEL` (integer scaling).
 - ⚡ **GPU-accelerated bottom screen** when `OutputMethod = SDL`.
 - 💤 **Suspend-aware** — integrates with ROCKNIX sleep via logind: audio pauses and state is saved before the device suspends.
+- 🌍 **Multiple languages** — English and a complete Spanish translation (dialogue, pause menu, file select and bottom screen), switchable in-game from the settings. New languages are a folder in [`lang/`](lang/README.md).
 - 📦 **PortMaster-style package** — drop it into `/storage/roms/ports/` and it appears in EmulationStation.
 
 ## Screenshots
@@ -85,7 +86,7 @@ Run from the repository root:
 ```powershell
 .\build.ps1 image                 # once: build the toolchain image
 .\build.ps1 all                   # fetch sources, compile and package
-.\build.ps1 assets                # generate zelda3_assets.dat from rom\zelda3.sfc
+.\build.ps1 assets                # generate zelda3_assets.dat (+ translations in lang\) from rom\zelda3.sfc
 .\build.ps1 package               # repackage with the assets included
 .\build.ps1 deploy -DeviceIp 192.168.1.50 -DevicePass <ROCKNIX root password>
 ```
@@ -120,6 +121,7 @@ ROCKNIX Samba share) and refresh the game list in EmulationStation.
 | `TOP SCREEN HUD` | Show or hide the HUD on the top screen |
 | `CRT FILTER` | Toggle the CRT filter |
 | `AUTOSAVE ON EXIT` | Save state on exit and restore it on launch |
+| `LANGUAGE` | Cycle through the languages in `zelda3_assets.dat` (`Language` in `zelda3.ini`) |
 | `SAVE STATE` / `LOAD STATE` | Slot 1 |
 | `REMAP BUTTONS` | Reassign the gamepad buttons |
 | `QUIT GAME` | Exit to EmulationStation |
@@ -153,9 +155,10 @@ The rationale behind each choice is documented in [`docs/ROCKNIX-RGDSPLUS.md`](d
 ├── scripts/                fetch-sources, build, extract-assets, package, deploy
 ├── patches/                Port changes on top of zelda3-android (git format-patch)
 ├── port/                   Zelda3.sh launcher, zelda3.ini for RG DS Plus, port.json, gameinfo.xml
+├── lang/                   Translations: dialogue, font glyphs and interface texts per language
 ├── rom/                    Your ROM (git-ignored)
 ├── docs/                   ROCKNIX / RG DS Plus technical notes and screenshots
-├── tools/                  make_art.py: screenshots and cover art from a device photo
+├── tools/                  make_art.py (screenshots/cover art), lang/build_assets.py (translations)
 ├── build.ps1               Windows entry point (no make required)
 └── zelda3ds.mk             Make entry point for Linux / WSL
 
@@ -172,6 +175,7 @@ external/  build/  dist/    Generated output (git-ignored)
 - [x] Performance measured on the device: locked 60 fps, ~8.5 ms per frame on the default governor
 - [x] ROCKNIX suspend integration (logind)
 - [x] Cover art and screenshots (`cover.png`, `screenshot.png`)
+- [x] Multi-language support and Spanish translation (`lang/`, patch `0007`)
 - [ ] Screenshots of the current UI (pending an on-device capture method)
 
 ## Acknowledgements

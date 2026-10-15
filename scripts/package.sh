@@ -19,6 +19,13 @@ install -m 644 "$ROOT/port/gameinfo.xml" "$PORTS/zelda3/gameinfo.xml"
 for img in cover.png screenshot.png; do
   if [ -f "$ROOT/port/zelda3/$img" ]; then install -m 644 "$ROOT/port/zelda3/$img" "$PORTS/zelda3/$img"; fi
 done
+# Interface translations: lang/<code>/strings.ini -> zelda3/lang/<code>.ini
+for strings in "$ROOT"/lang/*/strings.ini; do
+  [ -f "$strings" ] || continue
+  code=$(sed -n 's/^[[:space:]]*code[[:space:]]*=[[:space:]]*\([^[:space:]]*\).*/\1/p' "$(dirname "$strings")/language.ini" | head -n1)
+  [ -n "$code" ] || continue
+  install -D -m 644 "$strings" "$PORTS/zelda3/lang/$code.ini"
+done
 LICENSE_SRC="$ROOT/external/zelda3-ds/app/jni/src/LICENSE.txt"
 if [ -f "$LICENSE_SRC" ]; then install -m 644 "$LICENSE_SRC" "$PORTS/zelda3/LICENSE.txt"; fi
 

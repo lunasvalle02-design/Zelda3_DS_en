@@ -1,0 +1,411 @@
+# Zelda3 DS - Spanish dialogue (Español)
+#
+# One message per line: "<number>: <text>". Message numbers follow the US
+# script that restool.py extracts from your ROM (assets/dialogue.txt).
+#
+# Messages without [2], [3] or [Scroll] are laid out automatically when the
+# assets are built (tools/lang/build_assets.py): words wrap to the 168 px
+# text box and the game waits for a key every three lines.
+#   [Waitkey]  end the line here and wait for a key
+#   [/]        end the line here; if the next line starts with spaces it is
+#              kept as written (choices: "[/]    > Sí[/]       No")
+# Messages that contain [2], [3] or [Scroll] are used exactly as written
+# (signs, menus, the intro and the ending).
+# See lang/README.md for the full reference.
+1: 
+2: [Speed 00][3]      [2]    >[Choose]
+3: [Speed 00][2]      [3]    >[Choose]
+4: [Speed 00]Guardar y continuar[2]Guardar y salir[3]Continuar sin guardar
+5: [Speed 00]0- [Number 00]. 1- [Number 01][2]2- [Number 02]. 3- [Number 03]
+6: No puedes entrar con alguien siguiéndote.
+7: [Speed 00][1]>[2]  [3]  [Choose3]
+8: [Speed 00][1]  [2]>[3]  [Choose3]
+9: [Speed 00][1]  [2]  [3]>[Choose3]
+10: [Speed 00][1]>[2]  [Choose2]
+11: [Speed 00][1]  [2]>[Choose2]
+12: [Speed 00][3]    [2]  >[Selchg]
+13: [Speed 00][2]    [3]  >[Selchg]
+14: [Name], voy a salir un rato. Volveré por la mañana. No salgas de casa.
+15: Uhhh[...] [Name], no quería que te vieras metido en esto[...] Te dije que no salieras de casa[...][Waitkey]Toma mi espada y mi escudo, y escucha. Puedes concentrar poder en la hoja (mantén pulsado el Botón [B]).[Waitkey][...]Luego suéltalo con la técnica secreta que nuestro pueblo ha transmitido[...][Waitkey][Name], ¡tú puedes! Salva a la princesa[...] Zelda es tu[...] [...] [...]
+16: ¿Qué haces despierto a estas horas, chaval? ¡Cuando seas mayor podrás trasnochar! ¡Vete a casa!
+17: Veo que has traído un mapa para no perderte. (Pulsa el Botón [X] para ver tu mapa.)
+18: Pareces fuerte para ser un crío. ¿Cuánto puedes levantar? (Pulsa el Botón [A] junto a un objeto para levantarlo.)
+19: ¡Seguro que estás deseando tener edad para usar una espada! (Pulsa el Botón [B] para usar la espada cuando la tengas.)
+20: Esa marca de tu mapa debe de ser tu destino.
+21: A menudo hay objetos de valor en los cofres. (Pulsa el Botón [A] frente a un cofre para abrirlo.)
+22: Los soldados hemos visto mucho mundo, chaval. Podrías aprender mucho de nosotros. ¡Aunque eso ya lo sabes!
+23: Busca al anciano de la aldea y consigue la Espada Maestra.
+24: ¡Princesa Zelda, estáis a salvo! ¿Esto es obra tuya, [Name]?
+25: Siento que una poderosa fuerza maligna guía los actos del brujo y aumenta su poder mágico. La única arma capaz de derrotar al brujo es la legendaria Espada Maestra. Se dice que el anciano de la aldea desciende de uno de los siete sabios. Tal vez él pueda contarte más[...] Marcaré su casa en tu mapa. ¡Pero ten mucho cuidado! ¡Seguro que los soldados del castillo te estarán buscando![Waitkey][...]    [...]    [...][Sound 45][/]Esconderé aquí a la princesa Zelda. ¡No te preocupes! ¡Busca al anciano![Waitkey][...]    [...]    [...][/]¿Lo has entendido?[/]    > Sí[/]       No del todo[Choose]
+26: Si derrotas al brujo, quizá los soldados recuperen la cordura.[Waitkey]¡Ve, busca los Colgantes!
+27: Lleva los tres Colgantes al Bosque Perdido. La Espada Maestra te espera allí.
+28: ¡[Name]! Llegas un segundo tarde. He fallado[...] Zelda[...] Los soldados se la han llevado. La han llevado al castillo.[Waitkey]Debes encontrarla antes de que el brujo haga su magia. Por favor[...] eres nuestra única esperanza[...]
+29: Gracias, [Name]. Presentía que estabas cerca.
+30: ¡Sí, [Name] me ayudó a escapar de la mazmorra! Cuando estaba cautiva, el brujo dijo, "Cuando acabe contigo, la última, el sello de los sabios se abrirá."[Waitkey][...]    [...]    [...][/][Name], no debes dejar que Hyrule caiga en las garras del brujo. Si rompe el sello de los siete sabios, un poder maligno arrasará esta tierra. Antes de que eso ocurra[...] antes de que sea tarde[...] ¡destruye al brujo antes de que él destruya Hyrule! ¡Tú puedes! Tú puedes[...]
+31: [Name], ¡ten cuidado ahí fuera! ¡Sé que puedes salvar Hyrule!
+32: [Window 02][Speed 03]Ayúdame[...][Wait 01] Por favor, ayúdame[...][Waitkey]Estoy prisionera en la mazmorra del castillo. Me llamo Zelda.[Waitkey]El brujo Agahnim les ha hecho algo[...] a las otras chicas desaparecidas. Ahora solo quedo yo[...][Waitkey]Agahnim se ha adueñado del castillo y ahora intenta abrir el sello de los siete sabios. [...]   [...][/]Estoy en la mazmorra del castillo.[Waitkey]Ayúdame, por favor[...]
+33: [Window 02][Speed 03]Ayúdame[...] Estoy en la mazmorra del castillo.[Waitkey]Sé que hay un pasadizo secreto desde fuera del castillo hasta el jardín interior.
+34: Hay un pasadizo secreto en la sala del trono que lleva al Santuario. Seguro que el anciano de allí nos ayudará.
+35: Esa estantería decorativa debería abrirse. ¿Tienes algo para alumbrar? Dentro está muy oscuro y no se ve nada sin luz. Si estás listo, ¡vamos! ¡Ayúdame a empujarla desde la izquierda!
+36: Tienes que tirar de la palanca para abrir la puerta. (Pulsa el Botón [A] y mantén Abajo en la Cruceta.)
+37: Muy bien, salgamos de aquí antes de que el brujo se dé cuenta. Conozco un camino secreto, pero antes tenemos que ir a la planta baja. ¡Vamos!
+38: [Name], escucha con atención. El brujo controla con magia a todos los soldados del castillo.[Waitkey]Me temo lo peor por mi padre[...] ¡El brujo es un monstruo despiadado con grandes poderes mágicos! [...]   [...]   [...][Waitkey]¿Lo has entendido?[/]    > Sí[/]       No del todo[Choose]
+39: Cuando explores, sigue las marcas que el anciano hizo en tu mapa.[Waitkey]Si no sabes qué hacer después, también puedes visitar a una adivina.
+40: ¡[Name], eres maravilloso! ¡Como pensaba, llevas dentro el poder del Héroe![Waitkey]Ahora debes conseguir la Espada Maestra. ¡Confío en que derrotarás al malvado brujo!
+41: [Window 02][Speed 03]¡[Name]! ¡Socorro! ¡Los soldados vienen hacia el Santuario! ¡AAAAAAAAH![Waitkey][...] [...] [...]
+42: Tras cruzar estas alcantarillas, estaremos muy cerca del Santuario![Waitkey]¡Tengamos cuidado!
+43: El Santuario está tras esa puerta. Tira de la palanca de allí.
+44: ¿Quién? ¡Ah, eres tú, [Name]! ¿Qué puedo hacer por ti, muchacho? ¿El anciano? Oh, nadie lo ha visto desde que el brujo empezó a reunir víctimas[...] [...]   [...]   [...][Waitkey]¿Qué? ¿La Espada Maestra? Bueno, no recuerdo bien los detalles, pero[...]
+45: Hace mucho tiempo, un pueblo próspero llamado los hylianos habitaba esta tierra[...][Waitkey]Las leyendas hablan de muchos tesoros que los hylianos escondieron por toda la tierra[...][Waitkey]La Espada Maestra, una poderosa hoja forjada contra los de corazón malvado, es uno de ellos. Dicen que ahora duerme en lo más profundo del bosque[...] [...] [...] [...][Waitkey]¿Entiendes la leyenda?[/]    > Sí[/]       No del todo[Choose]
+46: En fin, busca al anciano. Seguro que alguien en la aldea sabe dónde está.[Waitkey]Cuídate mucho, [Name][...]
+47: Ohhh, [Name]. ¡Has cambiado! Tienes un aspecto magnífico[...] ¡Por favor, sálvanos del brujo Agahnim!
+48: ¡Eh! ¡Aquí está [Name], el fugitivo buscado! ¡Soldados! ¡Quien sea! ¡Rápido!
+49: ¡Increíble! Por fin tienes los tres Colgantes[...] Ahora debes ir al Bosque Perdido.[Waitkey]Si eres el verdadero Héroe, la propia espada te elegirá. [...] [...] [...]
+50: Soy demasiado viejo para luchar. Solo puedo confiar en ti.
+51: En efecto, soy Sahasrahla, el anciano de la aldea y descendiente de los siete sabios.[Waitkey][...]   [...]     ¿De verdad?[/][Name], me sorprende que un joven como tú busque la espada que destierra el mal. No cualquiera puede usar esa arma. Las leyendas dicen que solo el Héroe que reúna los tres Colgantes podrá empuñarla. [...]   [...]   [...][Waitkey]¿Seguro que quieres buscarla?[/]    > ¡Sí![/]       ¡Por supuesto![Choose]
+52: Bien. Como prueba, ¿podrías traerme el Colgante del Valor del Palacio del Este?[Waitkey]Si me lo traes, te contaré más sobre la leyenda y te daré un objeto mágico.[Sound 45] Ahora, ve al palacio.
+53: Otros parientes de los sabios se esconden de los seguidores del malvado brujo.[Waitkey]Deberías encontrarlos.
+54: [Window 02][Speed 03][Name], soy yo, Sahasrahla. Te hablo a través del vacío mediante telepatía[...] El lugar donde estás era la Tierra Dorada, pero un poder maligno la convirtió en el Mundo Oscuro. El brujo ha roto el sello de los sabios y ha abierto un portal entre los mundos en el castillo de Hyrule. Para salvar esta mitad del mundo, el Mundo de la Luz, debes recuperar el Poder Dorado. También debes rescatar a las siete doncellas que Agahnim envió al Mundo Oscuro. Como descendientes de los siete sabios, tienen un poder que sin duda te ayudará. Las doncellas están encerradas en mazmorras ocultas llenas de criaturas malignas y trampas peligrosas. ¡Tu primer objetivo en este mundo es el Palacio de la Oscuridad![Sound 45] [Name], solo puedo confiar en ti. Por favor, cumple los deseos de este anciano. ¡Te lo ruego!
+55: [Window 02][Speed 03]Pero siento tu impotencia[...] Antes de seguir, busca la Perla Lunar en la Montaña de la Muerte. Te protegerá de la magia del Mundo Oscuro para que conserves tu figura heroica.
+56: Hay un objeto útil escondido en la cueva al este del Lago Hylia. ¡Consíguelo!
+57: ¿¡Oh!? ¡Tienes el Colgante del Valor! Ahora te contaré más sobre la leyenda[...][Waitkey]Hace tres o cuatro generaciones, una orden de caballeros protegía a la realeza hyliana.[Waitkey]Estos Caballeros de Hyrule eran también guardianes del Colgante del Valor.[Waitkey]Por desgracia, casi todos murieron en la gran guerra contra el mal que tuvo lugar cuando los siete sabios crearon su sello. Entre los descendientes de los Caballeros de Hyrule ha de surgir un héroe. [...]Ya veo. [Name], te creo. Debes conseguir los Colgantes que faltan. Y lleva esto contigo. Es un tesoro transmitido por las familias de los sabios. Quiero que lo tengas tú.
+58: ¡Estás en lo cierto, muchacho! Soy Sahasrahla, el anciano de la aldea y descendiente de los siete sabios. [...] [...] [...] ¿Qué? [Name], me sorprende que un joven como tú busque la espada que destierra el mal. No cualquiera puede usar esa espada.[Waitkey]Según los relatos de los hylianos, solo el Héroe que haya vencido a tres grandes males y ganado los tres Colgantes podrá empuñarla[...] [...] [...] [...][Waitkey]Veo que tienes el Colgante del Valor. Te contaré la leyenda que lo acompaña.[Waitkey]Hace tres o cuatro generaciones, una orden de caballeros protegía a la realeza hyliana.[Waitkey]Estos Caballeros de Hyrule eran también guardianes del Colgante del Valor.[Waitkey]Por desgracia, casi todos murieron en la gran guerra contra el mal que tuvo lugar cuando los siete sabios crearon su sello. Entre los descendientes de los Caballeros de Hyrule ha de surgir un héroe. [...]Ya veo. [Name], te creo. Debes conseguir los Colgantes que faltan. Y lleva esto contigo. Es un tesoro transmitido por las familias de los sabios. Quiero que lo tengas tú.
+59: Daré 100 rupias a quien encuentre a los descendientes de los sabios.   EL REY
+60:   [LinkL][LinkR]  ¡SE BUSCA! Este es el[2]criminal que raptó a Zelda.[3]¡Avisa a un soldado si lo ves!
+61:      ¡PELIGRO![2]No entres en la Montaña de la[3]Muerte sin permiso del Rey.
+62: Por aquí al[2]     Bosque Perdido
+63:            ¡PELIGRO![2]¡Cuidado con el agua y los Zora!
+64: Bienvenido a la Tienda de Magia.[2]La Cascada de los Deseos está[3]justo delante.
+65: Esta cueva lleva al camino de[2]vuelta a la Aldea Kakariko.
+66: Por aquí [Down][2]         Lago Hylia[3]         Tienda
+67: Por aquí [Left][2]         Aldea Kakariko
+68: Por aquí [Left][2]         Desierto del Misterio
+69: Por aquí [Up] [Right][2]         Tienda de Magia[3]         Cascada de los Deseos
+70: Por aquí [Right] Palacio del Este[3]Por aquí [Left] Castillo de Hyrule
+71: [2]        Lago Hylia
+72: No hagas caso al hombre de mediana edad normal y corriente que hay junto a este cartel.[Waitkey]¡Déjalo en paz!
+73: [2]La Casa de los Leñadores[3]A. Paleto y B. Paleto
+74: Por aquí [Down][2]       Aldea Kakariko
+75: Bulle, bulle, caldero, arde el fuego sin cesar[...] Preparo un brebaje de setas[...]
+76: Je, je[...] Gracias, muchacho[...] Vuelve a la tienda más tarde y tendré algo bueno[...][Waitkey]Je, je[...]
+77: Mmmmm[...] Ese olor a fruta podrida[...] Si me das esa Seta, podré terminar mi brebaje.[Waitkey]Je, je[...]
+78: Si quieres comprar la poción, tendrás que traer una botella para meterla[...] ¡Je, je, je!
+79: La roja es la medicina de la vida. La verde es la medicina de la magia. La azul renueva la vida y la magia. Toma, prueba un poco de Poción Roja[...] ¡Je, je!
+80: Sin una botella mágica no puedes comprar pociones. ¡Je, je, je!
+81: No, no, no[...] No puedo meter nada en una botella llena. ¡Je, je, je!
+82: ¡Has conseguido la Lámpara! Ahora puedes encender antorchas y ver en la oscuridad.
+83: ¡Has conseguido el Bumerán! ¡Pruébalo! (Para elegir un objeto, pulsa el Botón Start.)
+84: ¡Has encontrado el Arco! ¡Puedes disparar flechas hasta que se te acaben!
+85: ¡Te han prestado una pala! Puedes cavar en muchos sitios. ¡Nunca sabes lo que encontrarás!
+86: ¡Es la Capa Mágica! ¡Te vuelves invisible al ponértela! ¡Vigila tu Medidor de Magia!
+87: ¡Es Polvo Mágico! ¡Prueba a espolvorearlo sobre enemigos y muchas otras cosas!
+88: ¡Has comprado las Aletas de Zora! ¡Con ellas podrás nadar incluso en aguas profundas!
+89: ¡Has conseguido el Guante de Poder! ¡Sientes la fuerza en ambas manos! Ya puedes levantar y llevar piedras.
+90: ¡Has ganado el Colgante del Valor! ¡Llévaselo a Sahasrahla![Waitkey]¡Quedan dos Colgantes!
+91: ¡Has ganado el Colgante del Poder! ¡Ya casi has reunido los tres Colgantes![Waitkey]¡A por el último!
+92: ¡Has ganado el Colgante de la Sabiduría! ¡Con él ya tienes los tres Colgantes! ¡Ve ahora al Bosque Perdido a por la Espada Maestra!
+93: Esta Seta huele a fruta dulce y podrida[...] Puedes dársela a quien la quiera (selecciónala y pulsa el Botón [Y]).
+94: ¡Has encontrado el Libro de Mudora! ¡Con él podrás leer la antigua lengua de los hylianos!
+95: ¡Has encontrado la Perla Lunar! Protege al Héroe de los efectos transformadores del Poder Dorado.
+96: ¡Has encontrado la Brújula! ¡Ahora puedes localizar la guarida del malvado amo de la mazmorra!
+97: ¡Has conseguido el Mapa! Con él puedes ver tu posición actual y el resto de la mazmorra (pulsa [X]).
+98: ¡Has encontrado la Vara de Hielo! ¡Su magia gélida congela el aire! ¡Pero vigila tu Medidor de Magia!
+99: ¡Has encontrado la Vara de Fuego! ¡Esta vara domina el fuego rojo! ¡Pero vigila tu Medidor de Magia!
+100: ¡Es el Medallón Éter! ¡Su magia controla la alta atmósfera y el viento polar![Waitkey]¡Vigila tu Medidor de Magia!
+101: ¡Es el Medallón Bombos! ¡Su magia hace estallar el suelo con gran poder![Waitkey]¡Vigila tu Medidor de Magia!
+102: ¡Es el Medallón Temblor! ¡Su magia hace temblar el suelo y derrota a los enemigos cercanos![Waitkey]¡Vigila tu Medidor de Magia!
+103: ¡Has conseguido el Martillo Mágico! ¡Puedes clavar las estacas de madera en el suelo![Waitkey]¡También puedes golpear otras cosas con él!
+104: ¡Oh! ¡Aquí está la Flauta! ¡Su música seguro que tiene algún poder misterioso!
+105: ¡Has conseguido el Bastón de Somaria! ¡Te será muy útil si lo usas bien![Waitkey]¡Qué bastón tan misterioso!
+106: ¡BOING! ¡Es el Gancho! Se extiende y se recoge y[...] ¡BOING! ¡Puede engancharse a muchas cosas!
+107: ¡Has conseguido Bombas! ¡Puedes recoger y lanzar una Bomba que hayas colocado (pulsa el Botón [A])!
+108: ¡Es una Botella Mágica! ¡Puedes guardar un objeto dentro y usarlo más tarde!
+109: ¡Has conseguido la Llave Grande! Es la llave maestra de la mazmorra. Abre muchas cerraduras que las llaves pequeñas no pueden abrir.
+110: ¡Has conseguido el Guante de Titán! Ahora puedes levantar las piedras más pesadas, que antes eran imposibles de mover.
+111: ¡Te ha dado el Espejo Mágico! Este espejo es azul, claro y precioso[...][Waitkey]Sientes como si fuera a absorberte hacia otro mundo[...]
+112: ¡Es esta! ¡La Espada Maestra! [...] [...] [...] No, no puede ser esta[...] Qué pena.
+113: [Window 02][Speed 03]De repente, Sahasrahla te habla por telepatía[...] [...] [...] [...][Waitkey][Name], es extraordinario que hayas ganado la Espada Maestra, que hace retroceder al mal[...][Waitkey]Con esta espada reluciente, creo que podrás repeler los poderes malignos del brujo.[Waitkey]El destino de esta tierra está en tus manos.[Waitkey]Por favor, [Name][...]
+114: Je, je, je[...] ¡Gracias! Esta es la Medicina de la Vida. Úsala para recuperar tu energía.
+115: Je, je, je[...] ¡Gracias! Esta es la Medicina de la Magia. Con ella puedes recargar tu energía mística.
+116: Je, je, je[...] ¡Gracias! ¡Esta es la Medicina de la Vida y la Magia! ¡Recupera ambas!
+117: ¡Te han prestado la Red para Bichos! Puede que también sirva para atrapar otras cosas.
+118: ¡Has encontrado la Cota Azul! ¡Esta armadura reduce el daño que te hacen los enemigos!
+119: ¡Has encontrado la Cota Roja! ¡Protege todavía mejor que la Cota Azul!
+120: ¡Genial! ¡Tu espada es más fuerte! ¡Sientes su enorme poder recorriendo tu cuerpo!
+121: ¡Has encontrado el Escudo Espejo! ¡Ahora puedes reflejar rayos que tu viejo escudo no podía detener!
+122: ¡Has conseguido el Bastón de Byrna! ¡Si lo agitas una vez, un anillo de luz te protegerá!
+123: ¿Eh? ¡Está cerrado! ¡Si tuvieras la Llave Grande, quizá podrías abrirlo!
+124: ¡Te falta Poder Mágico! Ahora no puedes usar este objeto. ¡Vigila tu Medidor de Magia!
+125: ¡Te da las Botas de Pegaso! ¡Ahora puedes hacer un devastador ataque a la carrera![Waitkey](Mantén pulsado el Botón [A] un momento.)
+126: ¡Vaya! ¡Hace cientos de años que no veo a una persona normal! Déjame hablar contigo un rato.
+127: ¿Conoces la estatua de la gárgola de la aldea? Dicen que bajo la estatua se oye a una chica pidiendo ayuda. ¿No es una historia extraña[...]?
+128: Por sorprendente que parezca, la Trifuerza creó este mundo para cumplir el deseo de Ganon.[Waitkey]¿Que cuál es el deseo de Ganon? ¡Gobernar todo el cosmos! ¿No crees que sería posible con el poder de la Trifuerza de tu lado?
+129: Yo vivía en el Bosque Perdido, hasta que un día entré por error en un teletransportador mágico[...][Waitkey]El poder del Mundo Oscuro me convirtió enseguida en este árbol[...][Waitkey]Supongo que los dos bosques están conectados entre sí[...]
+130: He oído que usar Bombas es la mejor forma de derrotar a los gigantes de un solo ojo.[Waitkey]¡Es todo lo que sé!
+131: ¡Deja de molestarme! ¡Y mira por dónde vas cuando corres!
+132: ¡Has conseguido el Colgante del Poder! ¡Ya tienes los tres Colgantes! ¡Ve ahora al Bosque Perdido a por la Espada Maestra!
+133: ¡Has conseguido el Colgante de la Sabiduría! ¡Tu poder vuelve a aumentar! ¡Ahora, a por el último!
+134: ¡Muy buenas, forastero del Mundo de la Luz! Tienes pinta de buen tirador[...] ¿Quieres probar tu puntería en mi barraca de tiro? Te doy cinco disparos por 20 rupias.[Waitkey]Si eres tan bueno como creo, te vas a forrar de rupias.[Waitkey]¿Qué me dices, forastero?[/]    > Jugar[/]       Ni hablar[Choose]
+135: ¡Muy bien! ¡Apunta con cuidado! ¿Listo? ¡YA!
+136: Bueno, amiguito, puedes dar media vuelta y salir por donde has entrado.[Waitkey]¡Hasta luego! ¡Que tengas un buen día!
+137: ¿Quieres volver a disparar?[/]    > Continuar[/]       Dejarlo[Choose]
+138: --ESTANQUE DE LA FELICIDAD-- Lanza unas rupias y tus deseos se cumplirán.[Waitkey]¿Quieres lanzar rupias?[/]    > Lanzar unas pocas[/]       No me apetece[Choose]
+139: Elige un objeto con la Cruceta y lánzalo con el Botón [Y].[Item]
+140: Hola. ¿Se te ha caído esto?[/]    > Sí[/]       No, no es mío[Choose]
+141: Me gusta la gente sincera. A cambio te daré algo mejor.
+142: ¿Seguro que no es tuyo?[/]    > De verdad que no[/]       La verdad es que sí[Choose]
+143: Vamos, vamos, no me mientas. Por favor, recupéralo.
+144: ¡Has conseguido el Bumerán Mágico! ¡Puedes lanzarlo más rápido y más lejos que el viejo!
+145: ¡Tu escudo ha mejorado! ¡Ahora puedes defenderte de las bolas de fuego!
+146: ¡Son las Flechas de Plata que necesitas para derrotar a Ganon!
+147: Te ha llenado la botella con Medicina de la Magia. ¡Conseguir una poción así gratis es toda una ganga!
+148: ¡Tu espada es más fuerte! ¡Sientes su poder latiendo en tu mano!
+149: La Felicidad aumentó [Number 03][Number 02] rupias. En total, tu Felicidad es de [Number 01][Number 00].[Waitkey]Eres un poquito más feliz.
+150: Cumpliré tu deseo.[2]  >Quiero llevar más bombas[3]    Quiero llevar más flechas[Selchg]
+151: Entonces aumentaré tu capacidad para que puedas llevar hasta [Number 01][Number 00] Bombas.[Waitkey]Es solo una pequeña felicidad que puedo darte.
+152: Entonces aumentaré tu capacidad para que puedas llevar hasta [Number 01][Number 00] Flechas.[Waitkey]Es solo una pequeña felicidad que puedo darte.
+153: No puedo concederte más deseos, pero una amiga mía quizá pueda[...][Waitkey]Vive en la Cascada de los Deseos, cerca del lago de los Zora. Te devolveré tus rupias.[Waitkey]Que seas feliz[...]
+154: Uhhh[...] Mira dónde pisas. Hay agujeros en el suelo. ¿Puedes girar aquí a la derecha?[Waitkey]Muchacho, ¿tú también vas a la montaña a buscar el Poder Dorado?[Waitkey]Justo delante hay una montaña llena de monstruos. Mucha gente ha desaparecido en esta montaña buscando el Poder Dorado.[Waitkey]No quiero darte malos consejos, pero no te metas demasiado en una búsqueda tan loca.
+155: Uhh[...] Debe de haber un Corazón en la botella.
+156: Uhh[...] Gira aquí a la derecha[...] [...] ¿Sabes? Tengo una nieta de tu edad[...] El Rey se la llevó al castillo y nunca volvió.[Waitkey]¡Secuestrar a esas doncellas debe de formar parte del plan del brujo! Seguro que intenta usar de algún modo el poder de los descendientes de los sabios[...]
+157: No sé quién eres, pero si vas a subir a la montaña, ¿me llevas contigo? Perdí mi lámpara, así que[...]
+158: Las doncellas desaparecidas siguen vivas en alguna parte. Creo que un Héroe las rescatará[...][Waitkey]Espero ese día[...] Uhh[...] Son tiempos peligrosos[...] He hablado demasiado.[Waitkey]En fin[...] Gracias por tu amabilidad con un viejo como yo. Uhh[...] Quería darte esto.[Waitkey]Si entras en un teletransportador mágico, mírate en este espejo.
+159: El brujo ha engañado al Rey y ahora intenta abrir el camino al Mundo Oscuro.[Waitkey]Para completar tu misión necesitarás la Perla Lunar, que está en la torre de la cima de la montaña.[Waitkey]Lo único que puedo hacer por ti es aliviar tu cansancio[...][Waitkey]Vuelve cuando quieras.
+160: La Perla Lunar protege a su portador del aire mágico de la Tierra Dorada, para que conserve allí su forma humana.[Waitkey]Lo único que puedo hacer por ti es aliviar tu cansancio[...][Waitkey]Vuelve cuando quieras.
+161: [Name], creo que el brujo conectó los dos mundos en algún lugar cerca del castillo.[Waitkey]Lo único que puedo hacer por ti es aliviar tu cansancio[...] Vuelve cuando quieras.
+162: [...]mascullar, mascullar[...] A mi hijo le encantaba tocar la flauta, pero se fue a buscar el Poder Dorado y no ha vuelto[...] [...] [...][Waitkey]¿Dónde estará y qué estará haciendo?[...] [...] Zzzzzz Zzzzzz
+163: [...]mascullar, mascullar[...] ¿Oh? ¡Es la flauta de mi hijo[...]! ¿Has visto a mi hijo?[Waitkey]¿Dónde está? ¿Está bien? [...] [...] [...] [...][Waitkey]Oh, ya veo[...] Bueno, por la mirada de tus ojos sé lo que quieres decirme[...]
+164: ¿Te quedarías con la flauta? ¿Y tocarías su dulce melodía para el pájaro de la plaza de la aldea?[Waitkey]¡Te lo ruego, por favor! Seguramente mi hijo lo habría querido así[...][Waitkey][...]Aun así, ojalá pudiera verlo una vez más[...]
+165: Zzzzzzz Zzzzzzzz[2][...]  [...]  [...][3]Ronquido  Zzzzzz  Zzzzzz
+166: Oh, [Name]. Dicen que secuestraste a la princesa, pero yo sigo confiando en ti.
+167: ¡No me puedo creer que me hayas pillado! Con tu velocidad, secuestrar a Zelda debió de ser fácil[...][Waitkey]Aunque no pareces tan mal tipo[...] En fin, ya que eres tan rápido, quizá sea buena idea correr y chocar contra muchas cosas[...][Waitkey]Por ejemplo, los árboles de esta aldea tienen muchas cosas útiles colgando de sus ramas[...][Waitkey]Bueno, pruébalo, ¿vale?
+168: Si tienes tiempo para leer este cartel, ¡deberías ir a la meta ahora mismo!
+169: Daré un fragmento de Corazón a quien lleve puesta la Capa.
+170: Malditos sean los que tiren algo dentro de mi círculo de piedras.
+171: Por aquí [Up] Bosque Esqueleto[3]Por aquí [Down] Aldea de Proscritos
+172: [2]Por aquí [Right] Cueva
+173: [2]Por aquí [Right] Palacio Oscuro
+174: [2]Por aquí [Left] Tienda de Bombas
+175: [Left]  Pantano del Mal[2]         Sin entrada[3]         Sin salida
+176: Esta es la Aldea de Proscritos.[2]La gente sin rupias no es[3]bienvenida aquí.
+177: La Cascada de los Deseos está[2]a la vuelta de la esquina.
+178: Por aquí [Right][Up][2]Lago del Mal Agüero
+179: Desde que Agahnim tomó el poder, todo el mundo empezó a comportarse de forma extraña.[Waitkey]Supongo que solo es cuestión de tiempo que a mí también me afecte.
+180: ¡Eh, eh! ¡No puedes entrar en el castillo, hijo! ¡Vete a casa a dormir!
+181: [Window 02][Name], soy yo, Sahasrahla. Puedo hablarte por telepatía cuando pisas estas baldosas.[Waitkey]Te daré una pista. Puedes usar el tesoro escondido en este palacio para derrotar a los enemigos acorazados.
+182: [Window 02][Name], soy yo, Sahasrahla, el anciano. En esta torre hay un orbe llamado Perla Lunar.[Waitkey]Quien posee la Perla Lunar está protegido y su forma no cambia en el Mundo Oscuro.[Waitkey]¡Debes encontrarla y escapar de la torre! No olvides la Perla Lunar[...]
+183: [Ankh][Waves][Ankh][Snake][Ankh][Waves][Ankh][Snake][Ankh][Waves][Waves][Waves][Waves][Ankh][Snake][Ankh][Waves][Ankh][Snake][2][Ankh][Snake][Ankh][Ankh][Waves][Ankh][Snake][Ankh][Waves][Ankh][Snake][3][Ankh][Waves][Ankh][Snake][Ankh][Ankh][Waves][Ankh][Snake][Snake][Waves][Ankh][Ankh][Snake]
+184: El triunfo del Héroe en la Víspera del Cataclismo gana tres símbolos de virtud.[Waitkey]La Espada Maestra después recuperará, fiel al linaje del Caballero será.
+185: [Window 02][Name], soy yo, Sahasrahla. Debes encontrar la forma de llegar a la cima de la Roca[Waitkey]de los Anteojos. Desde allí podrás llegar a la Torre de Hera, en la cima de la Montaña de la Muerte.
+186: [Window 02][Name], soy yo, Sahasrahla. Los objetos existen a la vez en ambos mundos con formas parecidas.[Waitkey]Si la forma de algo cambia, afectará a la forma de su gemelo en el otro mundo.
+187: [Window 02][Name][...] Soy yo, Zelda[...] ¡No te dejes engañar por la magia de Blind el Ladrón! ¡Ten cuidado!
+188: [Window 02][Name], ¡soy yo, Sahasrahla, el anciano! Debes encender cuatro antorchas para abrir el camino.
+189: [Ankh][Snake][Ankh][Waves][Ankh][Snake][Ankh][Waves][Ankh][Waves][Ankh][2][Ankh][Waves][Ankh][Snake][Ankh][Snake][Ankh][Waves][Ankh][Snake][3][Ankh][Waves][Ankh][Snake][Ankh][Snake][Ankh][Waves][Ankh][Snake][Ankh]
+190: Para abrir el camino hacia delante, pide aquí tu deseo y te será concedido.
+191: [Window 02]Cuando Ganon esté aturdido, ¡dale el golpe de gracia con una Flecha de Plata![Waitkey]¿Lo has entendido, [Name]?
+192: [Window 02][Name], ¿me oyes? Soy yo, Zelda. Estoy encerrada en la Roca Tortuga, en la cima de la Montaña de la Muerte.[Waitkey]Sé que lo estás haciendo lo mejor que puedes, pero date prisa, por favor[...]
+193: [Window 02][Name], soy yo, Sahasrahla. Nunca dejes de buscar todos los tesoros de cada mazmorra.
+194: [Window 02]Escucha bien, [Name]. Ni siquiera con la Espada Maestra puedes dañar físicamente al brujo.[Waitkey]Debes encontrar la forma de devolverle su propio poder mágico maligno.
+195: [Window 02][Name], no gastes todo tu poder mágico si no tienes la Medicina de la Magia.[Waitkey]Ahora, prepárate para adentrarte en las profundidades de esta mazmorra.
+196: [Window 02][Name], ¿tienes la Medicina de la Magia? Si no, te aconsejo que no sigas adelante.
+197: [Window 02][Name], las llamas mágicas te protegerán dentro de esta mazmorra helada.
+198: [Window 02]No puedes destruir al Caballero Esqueleto solo con la espada. Cuando se desmorona, es vulnerable a otra arma.
+199: [Window 02][Name], soy yo, Sahasrahla, el anciano. Tengo un consejo[...][Waitkey]En las mazmorras puedes mirar el Espejo Mágico para volver a la entrada en cualquier momento.[Waitkey]¡No lo olvides!
+200: Me llamo Chris Houlihan. Esta es mi sala ultrasecreta. Que quede entre nosotros, ¿vale?
+201: ¡Has atrapado una abeja![Waitkey]¿Qué vas a hacer?[/]    > Guardarla en botella[/]       Dejarla libre[Choose]
+202: ¡Has atrapado un hada![Waitkey]¿Qué vas a hacer?[/]    > Guardarla en botella[/]       Dejarla libre[Choose]
+203: No tienes ninguna botella vacía. No te queda otra[...] Déjala libre.
+204: Esta vez tu tiempo ha sido de [Number 03][Number 02] minutos y [Number 01][Number 00] segundos.
+205: Si llegas a la meta en menos de 15 segundos, te daremos algo bueno.[Waitkey]Preparados, listos[...] [...] ¡YA!
+206: ¡Lo has conseguido! ¡Enhorabuena! ¡Te entrego un fragmento de Corazón!
+207: No lo has conseguido. ¡Qué pena! ¿Por qué no lo intentas otra vez?
+208: Ya no tengo nada más que darte. ¡Lo siento!
+209: Tienes que entrar en el laberinto por la entrada correcta o no podré cronometrarte[...]
+210: ¡Usted, caballero! ¿Ha ido por la vida sin una de mis botellas para guardarlo todo?[Waitkey]¡Pues acérquese y complete su vida! ¡Tengo una en oferta por el módico, módico precio de 100 rupias![Waitkey]¿Qué me dice? ¿Le interesa?[/]    > Me llevo una[/]       No la necesito[Choose]
+211: ¡Buena compra! ¡Muchas gracias! Ahora levántala sobre tu cabeza para que la vea todo el mundo, ¿vale?[Waitkey]¡Es buena para el negocio!
+212: Así que no tienes dinero, ¿eh? Qué pena[...] Vuelve cuando ganes más rupias. Puede que siga aquí.
+213: Se me han acabado las botellas. Vuelve más tarde, ¿vale? [...] [...] [...]
+214: ¡Vaya! ¡Nunca había visto un bicho tan raro! Te lo compro por 100 rupias, ¿vale? ¡Trato hecho!
+215: ¡Eh! Dicen que comer pescado te hace listo. Tienes que darme este pez a cambio de esto, ¿vale? ¡Trato hecho!
+216: ¡Hola! ¡[Name]! Parece que estás metido en un buen lío, pero esto es todo lo que puedo darte.
+217: ¡Eh, tú! ¡Bienvenido![Waitkey]¡Pídenos lo que quieras![/]    > Templar mi espada[/]       Solo pasaba por aquí[Choose]
+218: ¡Te haré un gran descuento![/]    >Templar espada[...] 10 rupias[/]      Espera un momento[Choose]
+219: ¿Templarla? ¿Estás seguro?[/]    > Sí[/]       He cambiado de idea[Choose]
+220: Bueno, no podemos hacerla más fuerte que eso[...] ¡Lo siento!
+221: Vuelve cuando quieras. ¡Ay, ho! ¡Ay, ho! ¡A trabajar!
+222: Muy bien, no hay problema. Tendremos que quedarnos tu espada un rato.
+223: ¡Tu espada está templada! ¡Ahora sujétala!
+224: Si mi compañero perdido vuelve, podremos templar tu espada, pero ahora no puedo hacer nada por ti.
+225: ¡Oh! ¡Vuelven los días felices! ¡Has encontrado a mi compañero! [...] Ahora somos muy felices[...][Waitkey]¡Vuelve a pasarte por aquí! ¡Entonces templaremos tu espada a la perfección!
+226: Croac, croac[...] ¡Tu cuerpo no ha cambiado! No eres un tipo corriente, ¿verdad?[Waitkey]Yo vivía en el pueblo de Kakariko. Me pregunto qué estará haciendo allí mi compañero sin mí[...][Waitkey]¡Croac! Tengo que pedirte algo. ¡Llévame con mi compañero, por favor![Waitkey]¡Por favor! ¡Croac! ¡Por favor!
+227: Lo siento, aún no hemos terminado. Vuelve dentro de un rato.
+228: ¡Gracias![2][3]¡Gracias!
+229: Eh, eh, los aficionados no deberían intentar esto. ¡Solo estás estorbando!
+230: Al entrar por error en este mundo me convertí en esto. [...] [...] [...][Waitkey]En el mundo original me encantaba tocar la flauta[...] [...] [...] [...][Waitkey]Había una pequeña arboleda donde se reunían muchos animales. Quiero volver a ver ese lugar[...][Waitkey]Enterré allí mi flauta con unas semillas de flores.[Waitkey]¿Me la buscarás, por favor?[/]    > Sí[/]       Ni hablar[Choose]
+231: Entonces te prestaré mi pala. ¡Buena suerte!
+232: [...]  [...]  [...] Ya veo. No te lo volveré a pedir[...] Adiós.
+233: ¿Has encontrado mi flauta? [...] [...] [...] Sigue buscándola, por favor[...]
+234: Gracias, [Name]. Pero parece que ya no puedo tocar mi flauta. Quédatela, por favor.[Waitkey]Si por casualidad vas a la aldea donde vivía, dásela a un anciano cansado que encontrarás allí.[Waitkey][...] [...] [...] Vaya, mi mente se está nublando[...][Waitkey]Déjame oír el sonido de la flauta por última vez[...]
+235: [Position 01]¡Abracadabra! Encontrarás al anciano Sahasrahla[...]
+236: [Position 01]¡Abracadabra, patas de cabra! Abrirás una cerradura del desierto con el Libro de Mudora.
+237: [Position 01]¡Abracadabra! Encontrarás a un descendiente de los sabios en el desierto.
+238: [Position 01]¡Abracadabra, patas de cabra! Encontrarás a un amante de las setas en la Tienda de Magia[...]
+239: [Position 01]¡Abracadabra! Conocerás a un Zora que vive en un lago en el nacimiento del río[...]
+240: [Position 01]¡Abracadabra, patas de cabra! El verdadero Héroe encontrará la Perla Lunar en la torre de la montaña.
+241: [Position 01]¡Abracadabra! Ni siquiera la poderosa Espada Maestra puede dañar el cuerpo del brujo.
+242: [Position 01]¡Abracadabra, patas de cabra! El verdadero Héroe saltará al pozo que hay junto a la herrería.
+243: [Position 01]Bueno, he de decir que hoy no estoy en muy buena forma. Pero quiero que vuelvas[...]
+244: [Position 01]Mmm[...] Parece que te espera un destino interesante[...] ¿Puedo leerte la fortuna?[Waitkey]Te la dejo barata[...][/]    > Que me la lea[/]       No me interesa[Choose]
+245: [Position 01]Ahora me quedaré con [Number 00][Number 01] rupias. Que tengas salud. ¡Yijaaa, ja, ja!
+246: [Position 01]Pobre de quien no tiene interés por su futuro[...] Esperaré tu regreso.
+247: [Position 01]¡Abracadabra! Conocerás a un hombre extraño plantado en el desierto[...]
+248: [Position 01]¡Abracadabra, patas de cabra! La tienda de chismes del Mundo Oscuro tiene un tesoro para quien lo pida[...]
+249: [Position 01]¡Abracadabra! Encontrarás al compañero del herrero en la Aldea de Proscritos.
+250: [Position 01]¡Abracadabra, patas de cabra! Encontrarás un tesoro que descansa en paz en el cementerio.
+251: [Position 01]¡Abracadabra! Comprarás un nuevo tipo de bomba en la Tienda de Bombas.
+252: [Position 01]¡Abracadabra, patas de cabra! Encontrarás algo dentro de la pirámide del Mundo Oscuro.
+253: [Position 01]¡Abracadabra! Toparás con una barrera si intentas entrar en la torre de Ganon.
+254: [Position 01]¡Abracadabra, patas de cabra! Necesitarás Flechas de Plata para darle a Ganon el golpe de gracia.
+255: ¡Eh! Te contaré una historia provechosa si me pagas 20 rupias.[Waitkey]¿Qué me dices?[/]    > Pagar las rupias[/]       No quiero oírla[Choose]
+256: ¡Ja! Gracias. Dicen que hay un pequeño círculo de piedras en el lago del nacimiento del río.[Waitkey]No sé qué pasará, pero quizá sea divertido tirar algo dentro[...][Waitkey]Je, je. Hasta luego[...]
+257: Je, je. Ya veo. No me interesa hablar con gente que no tiene rupias[...]
+258: Je, je. Gracias. A decir verdad, yo era ladrón en el Mundo de la Luz[...][Waitkey]algunos de mis colegas ladrones se escondieron por miedo a que los atraparan.[Waitkey]Uno de ellos era un maestro cerrajero, pero ahora oculta que fue ladrón[...][Waitkey][...]¡haciéndose pasar por un extraño hombre de mediana edad! Ja, ja, ja[...]
+259: ¡Ja! Gracias. A decir verdad, encontré una belleza increíble dentro de la pirámide,[Waitkey]pero alguien selló la puerta. Dicen que con una bomba normal no se puede hacer nada[...]
+260: Je, je. Gracias. Lo cierto es que la magia de los monstruos hace que llueva en el pantano.[Waitkey]Si consigues mover el aire con más fuerza que los monstruos, puede que deje de llover.
+261: Snif[...] ¡Eh, hermano [Name]! ¿Tienes una botella para guardar un bicho?[Waitkey][...] Ya veo. No tienes ninguna[...] Cof, cof[...]
+262: No puedo salir porque estoy enfermo[...] Cof, cof[...] Dicen que pillé este resfriado[Waitkey]por el aire maligno que baja de la montaña[...] Snif, snif[...][Waitkey]Esta es mi red para bichos. La usaré cuando me ponga bueno, pero por ahora te la presto.
+263: Snif[...] Espero ponerme bueno pronto[...] Cof, cof[...]
+264: [...]  [...]  [...]  [...]  [...]  [...][2][...]  [...]  [...]
+265: ¿Por qué te has llevado mi cartel? ¡Dice bien claro que me dejes en paz! ¡Vaya tela!
+266: He oído que sabes que yo era ladrón, ¿verdad?[Waitkey]Bueno, te abriré un cofre. ¿Lo mantendrás en secreto?[Waitkey]¿Me lo prometes, por favor?[/]    > Prometo no contarlo[/]       Se lo diré a todos[Choose]
+267: Vale, si así lo quieres, ¡ojalá tengas que arrastrar ese cofre para siempre!
+268: Recuerda que lo prometiste[...] No se lo digas a nadie.
+269: Muy bien, trae aquí ese cofre[...] En serio, que nadie se entere de esto.
+270: [Waves][Snake][Waves][Snake][Waves][Snake][Waves][Snake][Waves][Snake][Waves][Waves][Waves][Snake][2][Waves][Ankh][Snake][Snake][Ankh][Waves][Ankh][Snake][Waves][Ankh][Snake][Waves][Ankh][Snake][Waves][Ankh][3][Waves][Snake][Waves][Snake][Waves][Snake][Waves][Ankh][Waves][Ankh]
+271: Alza la Espada Maestra y obtendrás la magia del Éter.
+272: Alza la Espada Maestra y obtendrás la magia de Bombos.
+273: ¡Eh! ¡Maldito seas por despertarme de mi profundo y oscuro sueño! [...]Digo, ¡muchas gracias, señor![Waitkey]Pero ahora me vengaré de ti. ¡Prepárate! [...]Esto, ¿le parece bien, señor?
+274: ¡Je, je, je! ¡Me río de tu desgracia! ¡Ahora tu poder mágico se reducirá a la mitad![Waitkey]¡Enhorabuena! Ahora esfuérzate, ¡aunque seguro que no bastará![Waitkey]¡Que tengas un buen día! ¡Hasta luego!
+275: [ScrollSpd 00][Color 07][Speed 03][Window 02][NextPic]Hace mucho tiempo, en el bello[2]reino de Hyrule, rodeado de[3]montañas y bosques[...][Wait 09][Scroll]se hablaba de un Poder Dorado[Scroll]omnipotente y omnisciente[Scroll]oculto en una tierra secreta.[Wait 09][NextPic][NextPic][Scroll]Muchos intentaron con ahínco[Scroll]entrar en la oculta[Scroll]Tierra Dorada[...][Wait 07][Scroll]Pero nadie regresó jamás.[Scroll]Un día, un poder maligno empezó[Scroll]a brotar de la Tierra Dorada[...][Wait 07][Scroll]Así que el Rey ordenó a siete[Scroll]sabios sellar la puerta a la[Scroll]Tierra del Poder Dorado.[Wait 09][NextPic][NextPic][Scroll]Aquel sello debía permanecer[Scroll]para siempre[...][Scroll][Wait 09][NextPic][NextPic][Scroll][...]  [...]Pero cuando aquello[Scroll]quedó envuelto en las brumas[Scroll]del tiempo y se hizo leyenda[...]
+276: [Window 02][Color 07][Speed 03][1]Un misterioso brujo llamado[2]Agahnim llegó a Hyrule para[3]romper el sello. Eliminó al[Wait 05][Scroll]bondadoso Rey de Hyrule[...][Wait 05]
+277: [Window 02][Color 07][Speed 03][1]Con su magia maligna, empezó[2]a hacer desaparecer, uno tras[3]otro, a los descendientes de[Wait 05][Scroll]los siete sabios.[Wait 05]
+278: [Window 02][Color 07][Speed 03][1]Y la hora del destino de la[2]princesa Zelda se está[3]acercando.[Wait 05]
+279: Como la llave está encerrada dentro de este cofre, nunca podrás abrirlo.[Waitkey]Llévatelo contigo.
+280: ¡30 Bombas por 100 rupias! ¡30 Bombas por solo 100 rupias! ¡Cómprelas, señor!
+281: ¡30 Bombas por 100 rupias! ¡También tengo una nueva Súper Bomba por solo 100 rupias![Waitkey]¡Cómprela también, señor!
+282: Muchísimas gracias. Muchísimas gracias.
+283: Muchísimas gracias. Puede dejar esta Bomba donde quiera. (Pulse el Botón [A].)[Waitkey]Por favor, no se olvide de ella.
+284: ¡Ki, ki, ki! Si me das 100 rupias, te abriré la entrada. ¡Ki, ki, ki![Waitkey]¿Qué vas a hacer?[/]    > Pedirle que la abra[/]       Abrirla tú mismo[Choose]
+285: ¡Ki, ki, ki! ¡Hmpf! ¡Pues hazlo tú mismo! ¡Kik, ki, ki!
+286: ¡Ki, ki! ¡Buena elección! Entonces me quedo con 100 de tus rupias. ¡Kik, ki, ki!
+287: ¡Soy Kiki el mono, ki, ki! Me encantan las rupias más que nada. ¿Me das 10 rupias?[Waitkey]¿Qué vas a hacer?[/]    > Darle 10 rupias[/]       No darle nada nunca[Choose]
+288: ¡Ki, ki, ki, ki! ¡Buena elección! Te acompañaré un rato. ¡Kik, kiki!
+289: ¡Ki, ki! ¡Hmpf! Entonces no tengo motivos para hablar contigo. ¡Adiós! ¡Kik, ki, ki!
+290: ¿Ki, ki? ¿Qué haces? ¡No quiero ir allí!
+291: ¡Ohh, muchísimas gracias! Me has salvado la vida. Por favor, llévame fuera.
+292: ¡Aaaagh! ¡Qué luz!
+293: Esto[...] Espera un momento[...] Por favor, no vayas por aquí.
+294: Soy Aginah. Presiento que algo ocurre en la Tierra Dorada que sellaron los siete sabios[...][Waitkey]Debe de ser un presagio del Gran Cataclismo que predijo el pueblo de sangre hyliana[...][Waitkey][...] [...] [...] La profecía dice, "El Héroe estará en el desierto con el Libro de Mudora."[Waitkey]Con el Libro de Mudora podrás leer la lengua del pueblo hyliano. Debería estar en la casa de los libros de la aldea[...][Waitkey]¡Debes conseguirlo! Si eres la persona destinada a ser el Héroe[...]
+295: Has reunido los tres Colgantes. Si de verdad eres el Héroe que posee Sabiduría, Valor y Poder,[Waitkey]la Espada Maestra que duerme en el bosque será tuya.
+296: ¡Ajá! Es el Libro de Mudora. Con él podrás leer la lengua del pueblo hyliano.
+297: Eres el verdadero Héroe[...] Creo que devolverás la paz a esta tierra.
+298: Tu prueba en el desierto te ha hecho más fuerte. Por tus venas debe de correr la sangre del Héroe[...]
+299: ¿Has sido tú quien ha interrumpido mi plácida siesta? ¡Te daré esto si te largas!
+300: Ya no tengo más regalos buenos para ti. ¡Toma esto, pesado!
+301: ¡Hola, [Name]! Hace poco cayó una niebla misteriosa sobre el bosque. ¡Hay que tener cuidado!
+302: Quizá no sea nada, pero este árbol se nota algo raro al cortarlo[...]
+303: ¡Hola! La niebla del bosque se está disipando. ¡Gracias! ¡Podemos volver allí! ¡Eh, hermano!
+304: Sí, [Name], ahora estoy peleado con mi hermano pequeño. He sellado la puerta de su cuarto.
+305: Así que la puerta vuelve a estar abierta[...] Vale, vale, quizá debería hacer las paces con mi hermano[...]
+306: Eh, [Name], ¿vienes del cuarto de mi hermano mayor? ¿Sigue enfadado?
+307: [Speed 02][Position 01][Window 02][Name], gracias a ti he podido escapar de las garras de los monstruos malvados. ¡Gracias![Waitkey][...]Este mundo era la Tierra Dorada, donde se ocultaba la Trifuerza.[Waitkey]Pero el mundo se transformó porque Ganon, el rey de los ladrones, así lo deseó[...][Waitkey]Seguro que pretende conquistar incluso nuestro Mundo de la Luz tras acumular poder aquí.[Waitkey]Intenta abrir un portal mayor entre los mundos cerca del castillo usando nuestros poderes.[Waitkey]Pero el portal aún no está abierto del todo[...] Si las siete doncellas nos unimos, podremos romper la barrera que rodea la guarida de Ganon.[Waitkey]Te diré dónde están retenidas las otras chicas. Creo que destruirás a Ganon.[Waitkey]Entonces recuperaré mi forma original. [...] [...] [...] [...] [...][Sound 45]
+308: [Speed 02][Position 01][Window 02][Name], gracias a ti he podido escapar de las garras de los monstruos malvados. ¡Gracias![Waitkey][...]La Trifuerza concede los deseos de quien la toque, mientras esa persona viva[...][Waitkey]Por eso se ocultó en la Tierra Dorada. Solo unos pocos elegidos conocían su paradero, pero con el tiempo ese saber se perdió[...][Waitkey]Quien redescubrió la Tierra Dorada fue Ganondorf, el malvado ladrón. Por suerte, no supo cómo volver al Mundo de la Luz[...][Waitkey][...]Recuerda que tienes poderes mágicos que solo el Héroe puede aprovechar al máximo.[Waitkey]Hay otros puntos de teletransporte mágico como el que viste en la Montaña de la Muerte.[Waitkey]Usándolos podrás viajar entre los dos mundos y encontrar los males ocultos en el Mundo Oscuro.[Waitkey]¡Eres el único que puede destruir a Ganondorf, el ladrón[...] no, a Ganon, el malvado Rey de las Tinieblas!
+309: [Speed 02][Position 01][Window 02][Name], gracias a ti he podido escapar de las garras de los monstruos malvados. ¡Gracias![Waitkey][...]¿Conoces la profecía del Gran Cataclismo? Yo la oí así[...][Waitkey]Si alguien de corazón malvado obtiene la Trifuerza, está destinado a aparecer un Héroe[...][Waitkey][...]y solo él deberá enfrentarse a quien inició el Gran Cataclismo.[Waitkey]Si el malvado destruye al Héroe, nada podrá salvar al mundo de su perverso reinado.[Waitkey]Solo alguien de los Caballeros de Hyrule, que protegían a la realeza hyliana, puede convertirse en el Héroe[...][Waitkey]Tú eres de su linaje, ¿verdad? Entonces debes rescatar a Zelda sin falta.
+310: [Speed 02][Position 01][Window 02][Name], gracias a ti he podido escapar de las garras de los monstruos malvados. ¡Gracias![Waitkey]Mientras los sabios sellaban el camino al Mundo Oscuro, los Caballeros de Hyrule los defendían de los ataques de los monstruos.[Waitkey]He oído que los Caballeros de Hyrule casi desaparecieron en aquella batalla[...][Waitkey]Quizá seas el último que lleva la sangre de los Caballeros[...][Waitkey]Es irónico que el último del linaje pueda convertirse en el Héroe de la leyenda.[Waitkey]¡Seguro que puedes destruir a Ganon!
+311: [Speed 02][Position 01][Window 02][Name], gracias a ti he podido escapar de las garras de los monstruos malvados. ¡Gracias![Waitkey]Dicen que el pueblo hyliano dominaba poderes misteriosos, igual que los siete sabios.[Waitkey]Pero la sangre hyliana se ha ido diluyendo con el tiempo. Los que llevamos la sangre de los siete sabios tampoco tenemos ya un gran poder.[Waitkey]Nuestro poder aumentará si unimos el valor de los Caballeros con la sabiduría de los sabios.[Waitkey]Queda poco tiempo para que el portal del castillo que une los mundos se abra del todo.[Waitkey]Si derrotas a Ganon, este mundo desaparecerá y la Trifuerza esperará a un nuevo portador.[Waitkey]Creo en ti[...] ¡Buena suerte!
+312: [Speed 02][Position 01][Window 02][Name], gracias a ti he podido escapar de las garras de los monstruos malvados. ¡Gracias![Waitkey]Ganon nos capturó porque no podía romper el sello de los sabios solo con su poder.[Waitkey]Y entonces, usando al brujo Agahnim como peón, nos arrastró al Mundo Oscuro.[Waitkey]Tras resquebrajar el sello con nuestros poderes, nos encerró dentro de estos cristales.[Waitkey]Después nos entregó a sus leales monstruos. Pero Ganon no contaba con que llegaras tan lejos.[Waitkey]Ahora la princesa Zelda te espera dentro de la Roca Tortuga. ¡Date prisa, por favor!
+313: [Speed 02][Position 01][Window 02]Te agradezco que hayas venido hasta aquí a rescatarme. Como pensaba, eres el Héroe de la leyenda.[Waitkey]Lo he sentido desde la primera vez que nos vimos. [...] [...] [...][Waitkey]Ganon espera dentro de su torre para cruzar el portal que une los dos mundos.[Waitkey]Si Ganon entra en el Mundo de la Luz, es poco probable que nadie pueda detenerlo.[Waitkey]Pero si se queda en el espacio cerrado de este mundo, podrás encontrarlo huya a donde huya.[Waitkey]¡Ahora ve a la Torre de Ganon! Uniremos nuestros poderes para romper la barrera.[Waitkey]Devolvamos la paz al reino sin falta[...] [...] [...] [...][Sound 45]
+314: [Speed 02][Position 01][Window 02]Que el camino del Héroe te lleve a la Trifuerza.
+315: [Speed 02][Position 01][Window 02]¿Lo has entendido?[/]    >  Sí[/]        No del todo[Choose]
+316: [Name], vamos a romper la barrera de la Torre de Ganon con nuestro poder.
+317: [Speed 02][Position 01][Window 02]Te agradezco que hayas venido hasta aquí a rescatarme. Como pensaba, eres el Héroe de la leyenda.[Waitkey]Lo he sentido desde la primera vez que nos vimos. [...] [...] [...][Waitkey]Ganon espera dentro de su torre para cruzar el portal que une los dos mundos.[Waitkey]Si Ganon entra en el Mundo de la Luz, es poco probable que nadie pueda detenerlo.[Waitkey]Pero si se queda en el espacio cerrado de este mundo, podrás encontrarlo huya a donde huya.[Waitkey]Aún hay doncellas que necesitan tu ayuda. Cuando las rescates a todas, ve a la Torre de Ganon.[Waitkey]Los que llevamos la sangre de los sabios usaremos entonces nuestro poder para romper la barrera de Ganon.[Waitkey][Name][...] Debes devolver la paz a este reino[...]
+318: Ajá[...] ¡[Name]! ¡Te estaba esperando! Je, je, je[...][Waitkey]Esperaba poder hacer desaparecer a Zelda ante tus ojos. ¡Contempla! ¡El último instante de la princesa Zelda!
+319: Jo, jo, jo[...] Con esto, el sello de los siete sabios por fin se ha roto.[Waitkey]Ahora solo es cuestión de tiempo que el poder maligno cubra esta tierra[...][Waitkey]Al fin y al cabo, el Héroe de la leyenda no puede derrotarnos a nosotros, la tribu del mal, armados con el Poder Dorado.[Waitkey]Jo, jo, jo[...] ¡Ahora debo irme!
+320: ¿Ah, sí?[...] ¿Quieres decir que te gustaría ser destruido por completo? ¡Pues puedo cumplir tu deseo!
+321: ¡Grrrrugh! ¡Bien hecho! Como el verdadero Héroe que eres[...] Pero aún no estoy dispuesto a admitir la derrota. ¡Te arrastraré al Mundo Oscuro!
+322: ¡Jo, jo, jo! Me alegra que hayas venido hasta aquí, [Name].[Waitkey]Me encanta volver a verte, pero puedes estar seguro de que no habrá un tercer encuentro.[Waitkey]¡Prepárate para tu final!
+323: ¡Gua, ja, ja! ¿Qué quieres, renacuajo? ¿Tienes algo que preguntarme?[Waitkey]    >  Quiero las aletas[/]        Solo pasaba por aquí[Choose]
+324: ¡Gua, ja, ja! Pero no regalo las aletas así como así. Las vendo a 500 rupias el par.[Waitkey]¿Qué vas a hacer?[/]    >  Pagar 500 rupias[/]        Mejor lo dejo[Choose]
+325: ¡Gua, ja, ja! Marchando un par de aletas. Te daré un regalo con tu compra.[Waitkey]Te dejaré usar los canales mágicos del pueblo del mar, que unen lagos y ríos.[Waitkey]Cuando veas un remolino, sumérgete en él. ¡Nunca sabes dónde saldrás! ¡Gua, ja, ja!
+326: Vuelve nadando cuando tengas más rupias[...] ¡Gua, ja, ja! ¡Hasta la próxima!
+327: ¡Genial! Cuando quieras ver mi cara de pez, aquí serás bienvenido.[Waitkey][...] ¡Gua, ja, ja! ¡Adiós[...]!
+328: ¡Hola, [Name]! ¿El anciano? ¿Hablas del abuelito? Vale, pero no se lo digas a la gente mala.[Waitkey]Se esconde en el palacio que hay pasado el castillo. Te marcaré el sitio en el mapa. Aquí tienes[...][Sound 45]
+329: ¿Has visto al abuelito? Si toda la gente mala se va, podrá volver a la aldea.
+330: Eres nuevo por aquí, ¿verdad? ¿Has venido buscando el Poder Dorado?[Waitkey]Pues llegas tarde. Solo obedece a la primera persona que lo toca.[Waitkey]El último que reclamó el Poder Dorado deseó este mundo. Refleja su corazón.[Waitkey]Sí, yo vine aquí por codicia del Poder Dorado, y mira lo que me pasó[...][Waitkey]Para restaurar la Tierra Dorada, alguien digno del Poder Dorado debe derrotar al hombre que creó este lugar[...][Waitkey]Hasta entonces, estoy atrapado en esta forma tan extraña.[Waitkey]Pero qué cosa más traviesa para dejarla por ahí[...] El Poder Dorado[...][Waitkey]La Trifuerza[...]
+331:      -Estanque Misterioso-[2]¿Por qué no lanzas algo?[3][Waitkey][Scroll]¿Qué vas a hacer?[Scroll]    > Lanzar un objeto[Scroll]       Mejor no[Choose]
+332: ¡No lo hagas!
+333: ¡No lo hagas!
+334: Entonces te lo devolveré. No lo vuelvas a tirar.
+335: ¿Cuántas rupias vas a lanzar?[2]    > [Number 01][Number 00] rupias[3]       [Number 03][Number 02] rupias[Choose]
+336: Eres una persona sincera. Me caes bien. Te daré algo importante[...][Waitkey]Son las Flechas de Plata. ¡Para darle a Ganon el golpe de gracia las necesitarás sin duda![Waitkey]Ya sé que no tengo mucha figura de hada. ¡La culpa es del cruel poder de Ganon![Waitkey]¡Debes derrotar a Ganon!
+337: [2]   Muy buena suerte.
+338: [2]   Buena suerte.
+339: [2]   Un poco de suerte.
+340: [2]   Graves problemas.
+341: Para que lo sepas, hoy[2]tendrás
+342: ¡Un fragmento de Corazón![2]                 [1HeartL][1HeartR]
+343: ¡Un fragmento de Corazón![2]                 [2HeartL][1HeartR]
+344: ¡Un fragmento de Corazón![2]                 [3HeartL][3HeartR]
+345: ¡Un fragmento de Corazón![2]                 [4HeartL][4HeartR][3]¡Tu nivel de Corazones aumenta!
+346: ¡Un Contenedor de Corazón![2]                 [4HeartL][4HeartR][3]¡Tu nivel de Corazones aumenta!
+347: Curaré tus heridas y aliviaré tu cansancio[...] Cierra los ojos y relájate[...]
+348: ¿Oh? ¿Quién eres, señor Conejo? Este mundo es como el mundo real, pero el mal lo ha retorcido.[Waitkey]El Poder Dorado cambió tu forma para reflejar lo que hay en tu corazón y en tu mente.[Waitkey]Yo siempre estoy cambiando de opinión, así que me convertí en una bola[...] Pero si tienes una bola llamada Perla Lunar, aquí podrás conservar tu forma original.
+349: ¿No has cambiado de forma? No eres un tipo normal y corriente, ¿verdad?
+350: ¿¡Qué quieres!? ¿¡Tienes algo que decirme, conejo tonto!?[Waitkey]Vine aquí a por el Poder Dorado, ¡pero ahora soy un monstruo y no puedo volver al mundo real![Waitkey]¡Si tuviera la Perla Lunar de la Torre de Hera, podría recuperar mi forma original! ¡Tengo motivos de sobra para estar estresado![Waitkey]¡Así que lárgate! ¡Fuera, fuera!
+351: ¡VAYA! ¡Tu forma no ha cambiado! Tienes la Perla Lunar, ¿eh?
+352: En un mundo tan peligroso puedes necesitar muchas cosas. Elige lo que te guste[...]
+353: Hola, ¿puedo ayudarte? Puedes abrir dos cofres por 30 rupias. ¿Por qué no juegas?[Waitkey]¿Qué vas a hacer?[/]    > Jugar aquí[/]       Quizá otro día[Choose]
+354: Bueno, vuelve a jugar alguna vez. Te estaré esperando. Hasta entonces, ¡adiós!
+355: ¡Eh, chaval! ¡Puedes abrir un cofre después de pagar rupias!
+356: Ya no puedes abrir más cofres. Se acabó el juego.
+357: Muy bien, chaval. ¡Elige bien! ¡Buena suerte!
+358: ¿Puedo ayudarte? Elige lo que te guste (pulsa el Botón [A]). ¡Precios marcados!
+359: No necesitas ese objeto[...] ¿Por qué no eliges otra cosa?
+360: Muchísimas gracias. Siempre que pierdas tu escudo, vuelve por aquí.
+361: Muchísimas gracias. Esta es la Medicina de la Vida. Te ayuda a recuperar energía.
+362: Muchísimas gracias. Son Flechas. No puedes usarlas sin un Arco.
+363: Son Bombas. ¿Sabías que puedes recoger una Bomba que ya hayas colocado?[Waitkey](Pulsa el Botón [A].)
+364: Muchísimas gracias. Eso es una Abeja. Y no me preguntes para qué sirve.
+365: Muchísimas gracias. Puedes recuperar un Corazón.
+366: No, no, no[...] No puedo venderte la mercancía porque no tienes una botella vacía.
+367: Ahora no puedes llevar más, ¡pero puede que más tarde te haga falta!
+368: Nunca imaginé que un chico como tú pudiera darme tantos problemas. ¡Es increíble que hayas derrotado dos veces a mi otro yo, Agahnim, el Brujo Oscuro![Waitkey]Pero nunca te daré la Trifuerza. Te destruiré y haré realidad sin demora mi deseo de conquistar los Mundos de la Luz y de la Oscuridad.
+369: Lo estás haciendo bien, muchacho. Pero ¿podrás superar esta técnica secreta de las Tinieblas?[Waitkey]¡En guardia!
+370: ¡Eh, chaval, esto es el escondite secreto de una banda de ladrones! ¡No entres sin permiso![Waitkey]Por cierto, he oído que uno de nuestros antiguos miembros vive a la entrada del Desierto.
+371: ¡Hola, [Name]! Esta casa era el escondite de una banda de ladrones.[Waitkey]¿Cómo se llamaba su jefe[...]? Ah, sí, se llamaba Blind y odiaba la luz brillante.
+372: [Speed 02][Position 00][Window 02]Bienvenido, [Name][...][2]Soy   la   Esencia   de   la[3]Trifuerza.[Waitkey][Scroll][...]   [...]   [...][Speed 01][Waitkey][1]                                          [2]                                          [3]                                          [Speed 02][1]La Trifuerza cumple los deseos[2]del corazón y de la mente de[3]quien la toca.[Speed 01][Waitkey][1]                                          [2]                                          [3]                                          [Speed 02][1]Si la toca alguien de buen[2]corazón, hará realidad sus[3]buenos deseos[...] Si la toca[Waitkey][Scroll]alguien de corazón malvado,[Scroll]concede sus malvados deseos.[Speed 01][Waitkey][1]                                          [2]                                          [3]                                          [Speed 02][1]Cuanto más fuerte es el deseo,[2]con más poder lo cumple[3]la Trifuerza.[Speed 01][Waitkey][1]                                          [2]                                          [3]                                          [Speed 02][1]Ganon deseaba conquistar el[2]mundo. Ese deseo convirtió la[3]Tierra Dorada en el Mundo[Waitkey][Scroll]Oscuro.[Speed 01][Waitkey][1]                                          [2]                                          [3]                                          [Speed 02][1]Ganon reunía aquí su poder[2]para conquistar el Mundo de la[3]Luz y cumplir del todo su[Waitkey][Scroll]deseo.[Speed 01][Waitkey][1]                                          [2]                                          [3]                                          [Speed 02][1]Pero ahora has destruido por[2]completo a Ganon. Su Mundo[3]Oscuro desaparecerá.[Speed 01][Waitkey][1]                                          [2]                                          [3]                                          [Speed 02][1]La Trifuerza espera un nuevo[2]dueño. Su Poder Dorado está[3]en tus manos[...][Speed 01][Waitkey][1]                                          [2]                                          [3]                                          [Speed 02][1]Ahora, tócala con un deseo en[2]tu corazón.[3][...]  [...]  [...]  [...]
+373: ¡Muy bien! ¡Llévatelo, ladrón!
+374: Uau[...] La vi. Una joven encantadora en la Cascada de los Deseos, en las colinas donde nace el río[...][Waitkey][Name], deberías conocerla al menos una vez. Seguro que te gustará.
+375: Toma unas rupias, pero no le digas a nadie que te las he dado yo. Que quede entre nosotros, ¿vale?
+376: Echa un vistazo a la cueva al este del Lago Hylia. Allí viven cosas extrañas y maravillosas[...]
+377: Puedes ganar muchas rupias derrotando enemigos. Es el secreto de mi éxito[...]
+378: [Name], ¿sabías que si destruyes enemigos congelados con el Martillo, a menudo consigues una Jarra de Magia?
+379: Tralarí, busca a Sahasrahla. [...] [...] [...]
+380: ¡Oh, sí, has encontrado a Sahasrahla! [...] [...] [...] ¡Buen trabajo, lará!
+381: Lo siento, pero parece que no tienes suficientes rupias[...]
+382: Coc, coc[...] ¿¡Qué!? Me has convertido en humano. ¡Hasta puedo hablar![Waitkey]Ajá, así que eres tú quien siempre molesta a mis amigos. La Veleta siempre ve cómo los acosas.[Waitkey]En fin, esta forma humana me resulta incómoda. ¡Ahhh, quiero volver a ser una gallina! Coc, coc[...]
+383: Págame 20 rupias y te dejaré abrir un cofre. Puedes quedarte con lo que haya dentro.[Waitkey]¿Qué vas a hacer?[/]    >  Abrir un cofre[/]        Escapar[Choose]
+384: ¡Muy bien! ¡Abre el cofre que quieras!
+385: Oh, ya veo[...] Qué pena. Vuelve cuando hayas reunido rupias.
+386: Por 100 rupias te dejaré abrir un cofre y quedarte con el tesoro que haya dentro.[Waitkey]¿Qué vas a hacer?[/]    >  Abrir un cofre[/]        Escapar[Choose]
+387: Hola, [Name]. Perdona el estado de mi jardín. Está un poco descuidado. Gracias por venir.[Waitkey]Me alegra tener compañía para charlar. Te contaré una historia interesante.[Waitkey]En el nacimiento del río hay un lago lleno de Zoras, pero es difícil de encontrar.[Waitkey]El tesoro de los Zora puede convertir a la gente en peces. Je, je, je. Me encantaría verlo.
+388: Últimamente no he tenido ocasión de podar los setos. Gracias por venir de todos modos[...][Waitkey]Hace tiempo hubo en esta aldea un chico que hablaba con los animales con su Flauta.[Waitkey]Tenía un pájaro que volaba con él a todas partes, pero se fue a la montaña y nunca volvió.
+389: [Position 00][Speed 00]>Empezar en casa de [Name][2]  Empezar en el Santuario[Choose2]
+390: [Position 00][Speed 00]>Empezar en casa de [Name][2]  Empezar en el Santuario[3]  Empezar en la cueva del monte[Choose3]
+391: [Speed 00]> Continuar partida[2]   Guardar y salir[Choose2]
+392: Bienvenido al campo del tesoro. El objetivo es cavar tantos hoyos como puedas en 30 segundos.[Waitkey]Los tesoros que desentierres serán tuyos. Jugar cuesta solo 80 rupias.[Waitkey]¿Qué me dices?[/]    > Quiero cavar[/]       No quiero cavar[Choose]
+393: Entonces te prestaré una pala. Cuando la tengas en la mano, ¡ponte a cavar! (Pulsa el Botón [Y] para cavar.)
+394: Ya veo. Entonces me rindo. Ahorra unas rupias y vuelve.
+395: ¡Vale! Se acabó el tiempo, fin del juego. Vuelve otra vez. Adiós[...]
+396: ¡Vuelve otra vez! Te estaré esperando.
+397: No puedo darte detalles, pero ahora no me viene bien. Vuelve más tarde.[Waitkey]Lo siento.

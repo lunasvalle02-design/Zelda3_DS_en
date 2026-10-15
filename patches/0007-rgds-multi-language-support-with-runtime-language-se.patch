@@ -1,0 +1,1183 @@
+From 9628de7656ee36d23a0c5f1cc26aa6cf17a31ab5 Mon Sep 17 00:00:00 2001
+From: zelda3-ds <zelda3-ds@localhost>
+Date: Thu, 15 Oct 2026 20:36:09 +0200
+Subject: [PATCH 7/7] rgds: multi-language support with runtime language selection
+
+- i18n.c: languages compiled into zelda3_assets.dat (kDialogueMap) plus
+  interface texts from lang/<code>.ini next to the executable.
+- The dialogue language can change at runtime; a message already on screen
+  keeps the encoding and font it was built with (messaging.c).
+- Translated pause menu (item names, ability words, box headers) built from
+  the HUD letter tiles (hud.c).
+- Translated file select screens: text rows of the ROM tilemaps and of the
+  select_file.c stripe tables are rewritten with the 8x16 font (nmi.c,
+  select_file.c).
+- Bottom screen: every text goes through I18n_Get, UTF-8 accented capitals
+  are drawn with diacritics, and a LANGUAGE row in the settings cycles the
+  available languages and saves Language in zelda3.ini.
+---
+ app/jni/src/src/hud.c                         |  65 ++-
+ app/jni/src/src/i18n.c                        | 463 ++++++++++++++++++
+ app/jni/src/src/i18n.h                        |  46 ++
+ app/jni/src/src/main.c                        |   3 +-
+ app/jni/src/src/messaging.c                   |  21 +-
+ app/jni/src/src/nmi.c                         |  10 +-
+ .../src/platform/linux/second_screen_sdl.c    | 158 ++++--
+ app/jni/src/src/select_file.c                 |   8 +
+ 8 files changed, 727 insertions(+), 47 deletions(-)
+ create mode 100644 app/jni/src/src/i18n.c
+ create mode 100644 app/jni/src/src/i18n.h
+
+diff --git a/app/jni/src/src/hud.c b/app/jni/src/src/hud.c
+index 20647df..b3d12ea 100644
+--- a/app/jni/src/src/hud.c
++++ b/app/jni/src/src/hud.c
+@@ -1,4 +1,5 @@
+ #include "hud.h"
++#include "i18n.h"
+ #include "zelda_rtl.h"
+ 
+ #include "variables.h"
+@@ -1032,11 +1033,27 @@ void Hud_DrawAbilityBox() {  // 8de6b6
+ 
+   Hud_DrawBox(dst, x, 21, 19, 29, 1);
+ 
++  // zelda3-ds: ability words from [hud] in lang/<code>.ini
++  static const char *const kAbilityKeys[2][3] = {
++    { "lift", "read", "talk" }, { "pull", "run", "swim" },
++  };
+   uint8 flags = link_ability_flags;
+   for (int i = 0; i < 2; i++, flags <<= 1) {
++    bool prev_full = false;  // translated words are left aligned, one blank between words
+     for (int j = 0; j < 3; j++, flags <<= 1) {
+-      if (flags & 0x80)
+-        Hud_DrawNxN(dst + HUDXY(4 + j * 5, 22 + i * 2), kHudAbilityText + i * 40 + j * 10, 5, 2);
++      if (flags & 0x80) {
++        const uint16 *src = kHudAbilityText + i * 40 + j * 10;
++        uint16 tr[10];
++        if (I18n_HudAbility(kAbilityKeys[i][j], tr, 0x2c00, (i == 0 && j == 0) ? src[9] : 0, prev_full)) {
++          for (int k = 0; k < 5; k++)
++            tr[k] = src[k];
++          prev_full = (tr[9] & 0x3ff) != 0xf5;
++          src = tr;
++        }
++        Hud_DrawNxN(dst + HUDXY(4 + j * 5, 22 + i * 2), src, 5, 2);
++      } else {
++        prev_full = false;
++      }
+     }
+   }
+   // A
+@@ -1052,8 +1069,13 @@ void Hud_DrawAbilityBox() {  // 8de6b6
+   Hud_DrawItem(dst + HUDXY(4, 27), &kHudItemBoots[link_item_boots]);
+   Hud_DrawItem(dst + HUDXY(12, 27), &kHudItemFlippers[link_item_flippers]);
+   Hud_DrawItem(dst + HUDXY(16, 27), &kHudItemMoonPearl[link_item_moon_pearl]);
+-  if (link_item_gloves)
+-    Hud_DrawNxN(dst + HUDXY(4, 22), kHudGlovesText + (link_item_gloves != 1) * 10, 5, 2);
++  if (link_item_gloves) {
++    const uint16 *src = kHudGlovesText + (link_item_gloves != 1) * 10;
++    uint16 tr[10];
++    if (I18n_HudAbility("lift", tr, 0x2c00, src[9], 0))
++      src = tr;
++    Hud_DrawNxN(dst + HUDXY(4, 22), src, 5, 2);
++  }
+ }
+ 
+ void Hud_DrawProgressIcons() {  // 8de9c8
+@@ -1089,6 +1111,9 @@ void Hud_DrawProgressIcons_Pendants() {  // 8de9d3
+   };
+   uint16 *dst = uvram_screen.row[0].col + (kNewStyleInventory ? HUDXY(22, 11) : HUDXY(21, 11));
+   Hud_DrawNxN(dst, kProgressIconPendantsBg, 10, 9);
++  uint16 tr[8];  // zelda3-ds: translated header
++  if (I18n_HudText("pendants", tr, 1, 0x2400))
++    memcpy(dst + HUDXY(1, 1), tr, sizeof(tr));
+   Hud_DrawItem(dst + HUDXY(4, 3), &kHudPendants0[(link_which_pendants >> 0) & 1]);
+   Hud_DrawItem(dst + HUDXY(2, 6), &kHudPendants1[(link_which_pendants >> 1) & 1]);
+   Hud_DrawItem(dst + HUDXY(6, 6), &kHudPendants2[(link_which_pendants >> 2) & 1]);
+@@ -1109,6 +1134,9 @@ void Hud_DrawProgressIcons_Crystals() {  // 8dea62
+ 
+   uint16 *dst = uvram_screen.row[0].col + (kNewStyleInventory ? HUDXY(22, 11) : HUDXY(21, 11));
+   Hud_DrawNxN(dst, kProgressIconCrystalsBg, 10, 9);
++  uint16 tr[8];  // zelda3-ds: translated header
++  if (I18n_HudText("crystals", tr, 1, 0x2400))
++    memcpy(dst + HUDXY(1, 1), tr, sizeof(tr));
+ 
+   uint8 f = link_has_crystals;
+   if (f & 1) {
+@@ -1216,26 +1244,50 @@ void Hud_DrawSelectedYButtonItem() {  // 8deb3a
+       Hud_DrawFlashingCircle(p, kSwitchLR_palettes[btn_index]);
+   }
+ 
++  // zelda3-ds: translated names come from [hud] in lang/<code>.ini
++  static const char *const kItemKeys[20] = {
++    "bow", "boomerang", "hookshot", "bombs", "mushroom", "fire_rod", "ice_rod",
++    "bombos", "ether", "quake", "lamp", "hammer", "shovel", "bug_net", "book",
++    "bottle", "somaria", "byrna", "cape", NULL,
++  };
++  static const char *const kBottleKeys[8] = {
++    "bottle_mushroom", "bottle", "potion_red", "potion_green", "potion_blue",
++    "fairy", "bee", "good_bee",
++  };
++  static const char *const kBowKeys[3] = { "bow_arrows", "bow_silver", "bow_silver_arrows" };
++  const char *tr_key = NULL;
+   const uint16 *src_p;
+   if (item == kHudItem_BottleOld && !kNewStyleInventory && link_item_bottle_index) {
+     src_p = &kHudBottlesItemText[(link_bottle_info[link_item_bottle_index - 1] - 1) * 16];
++    tr_key = kBottleKeys[(link_bottle_info[link_item_bottle_index - 1] - 1) & 7];
+   } else if (item == 5 && link_item_mushroom != 1) {
+     src_p = &kHudMushroomItemText[(link_item_mushroom - 2) * 16];
++    tr_key = "powder";
+   } else if (item == 20 && link_item_mirror != 1) {
+     src_p = &kHudMirrorItemText[(link_item_mirror - 2) * 16];
++    tr_key = "mirror";
+   } else if (item == 13 && link_item_flute != 1) {
+     src_p = &kHudFluteItemText[(link_item_flute - 2) * 16];
++    tr_key = "flute";
+   } else if (item == 1 && link_item_bow != 1) {
+     src_p = &kHudBowItemText[(link_item_bow - 2) * 16];
++    tr_key = kBowKeys[(link_item_bow - 2) % 3];
+   } else if (item >= kHudItem_Bottle1 && item <= kHudItem_Bottle4) {
+     src_p = &kHudBottlesItemText[(link_bottle_info[item - kHudItem_Bottle1] - 1) * 16];
++    tr_key = kBottleKeys[(link_bottle_info[item - kHudItem_Bottle1] - 1) & 7];
+   } else if (item == kHudItem_Shovel) {
+     src_p = &kHudItemText[(13 - 1) * 16];
++    tr_key = "shovel";
+   } else if (item == 0) {
+     src_p = btn_index ? kNotAssignedItemText : &kHudItemText[(20 - 1) * 16];
++    tr_key = btn_index ? "not_assigned" : NULL;
+   } else {
+     src_p = &kHudItemText[(item - 1) * 16];
++    tr_key = (item >= 1 && item <= 20) ? kItemKeys[item - 1] : NULL;
+   }
++  uint16 tr_text[16];
++  if (tr_key && I18n_HudText(tr_key, tr_text, 2, 0x2400))
++    src_p = tr_text;
+   Hud_DrawNxN(dst_box + HUDXY(22, 8), src_p, 8, 2);
+ }
+ 
+@@ -1254,6 +1306,11 @@ void Hud_DrawEquipmentBox() {  // 8ded29
+   };
+   memcpy(dst + HUDXY(22, 22), &kHudEquipmentDungeonItemText[0], 8 * sizeof(uint16));
+   memcpy(dst + HUDXY(22, 26), &kHudEquipmentDungeonItemText[8], 8 * sizeof(uint16));
++  uint16 tr[8];  // zelda3-ds: translated headers
++  if (I18n_HudText("equipment", tr, 1, 0x2400))
++    memcpy(dst + HUDXY(22, 22), tr, sizeof(tr));
++  if (I18n_HudText("dungeon_item", tr, 1, 0x2400))
++    memcpy(dst + HUDXY(22, 26), tr, sizeof(tr));
+ 
+   static const ItemBoxGfx kHudItemHeartPieces[4] = {
+     {{0x2484, 0x6484, 0x2485, 0x6485}},
+diff --git a/app/jni/src/src/i18n.c b/app/jni/src/src/i18n.c
+new file mode 100644
+index 0000000..a27abbd
+--- /dev/null
++++ b/app/jni/src/src/i18n.c
+@@ -0,0 +1,463 @@
++// zelda3-ds: runtime language selection (see i18n.h).
++#include "i18n.h"
++
++#include <ctype.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "assets.h"
++#include "zelda_rtl.h"
++
++enum { kMaxLanguages = 32, kMaxCode = 16, kMaxName = 32 };
++
++typedef struct { char *key, *value; } I18nEntry;
++
++static char g_codes[kMaxLanguages][kMaxCode];
++static char g_names[kMaxLanguages][kMaxName];
++static int g_count;
++static int g_current;
++static uint32 g_generation;
++static I18nEntry *g_entries;
++static int g_entry_count, g_entry_cap;
++static char *g_file_data;
++static bool g_debug;
++
++// ---------------------------------------------------------------------------
++// Strings file: lang/<code>.ini
++
++static char *Trim(char *s) {
++  while (*s == ' ' || *s == '\t') s++;
++  char *e = s + strlen(s);
++  while (e > s && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r' || e[-1] == '\n')) *--e = 0;
++  return s;
++}
++
++static char *ReadFile(const char *path) {
++  FILE *f = fopen(path, "rb");
++  if (!f) return NULL;
++  fseek(f, 0, SEEK_END);
++  long size = ftell(f);
++  fseek(f, 0, SEEK_SET);
++  char *buf = NULL;
++  if (size >= 0 && size < (1 << 20) && (buf = malloc(size + 1)) != NULL) {
++    if (fread(buf, 1, size, f) != (size_t)size) {
++      free(buf);
++      buf = NULL;
++    } else {
++      buf[size] = 0;
++    }
++  }
++  fclose(f);
++  return buf;
++}
++
++static void FreeStrings(void) {
++  for (int i = 0; i < g_entry_count; i++)
++    free(g_entries[i].key);
++  free(g_entries);
++  free(g_file_data);
++  g_entries = NULL;
++  g_entry_count = g_entry_cap = 0;
++  g_file_data = NULL;
++}
++
++// Parses an ini file. Calls cb(section, key, value) for every entry.
++static void ParseIni(char *data, void (*cb)(const char *, const char *, const char *, void *), void *ctx) {
++  char section[64] = "";
++  char *line = data;
++  if ((uint8)line[0] == 0xef && (uint8)line[1] == 0xbb && (uint8)line[2] == 0xbf)
++    line += 3;  // UTF-8 BOM
++  while (line && *line) {
++    char *nl = strchr(line, '\n');
++    if (nl) *nl = 0;
++    char *t = Trim(line);
++    if (*t == '[') {
++      char *end = strchr(t, ']');
++      if (end) {
++        *end = 0;
++        snprintf(section, sizeof(section), "%s", Trim(t + 1));
++      }
++    } else if (*t && *t != '#' && *t != ';') {
++      char *eq = strchr(t, '=');
++      if (eq) {
++        *eq = 0;
++        cb(section, Trim(t), Trim(eq + 1), ctx);
++      }
++    }
++    line = nl ? nl + 1 : NULL;
++  }
++}
++
++static void AddEntry(const char *section, const char *key, const char *value, void *ctx) {
++  (void)ctx;
++  if (g_entry_count == g_entry_cap) {
++    g_entry_cap = g_entry_cap ? g_entry_cap * 2 : 128;
++    g_entries = realloc(g_entries, sizeof(I18nEntry) * g_entry_cap);
++  }
++  size_t ls = strlen(section), lk = strlen(key), lv = strlen(value);
++  char *k = malloc(ls + lk + lv + 3);
++  sprintf(k, "%s.%s", section, key);
++  char *v = k + ls + lk + 2;
++  memcpy(v, value, lv + 1);
++  for (char *p = k; *p && p < v; p++)
++    *p = (char)tolower((uint8)*p);  // keys are case-insensitive
++  g_entries[g_entry_count].key = k;
++  g_entries[g_entry_count].value = v;
++  g_entry_count++;
++}
++
++static void LoadStrings(const char *code) {
++  FreeStrings();
++  if (!strcmp(code, "us"))
++    return;
++  char path[64];
++  snprintf(path, sizeof(path), "lang/%s.ini", code);
++  g_file_data = ReadFile(path);
++  if (!g_file_data) {
++    fprintf(stderr, "i18n: %s not found, interface texts stay in English\n", path);
++    return;
++  }
++  char *copy = strdup(g_file_data);
++  ParseIni(copy, AddEntry, NULL);
++  free(copy);
++}
++
++const char *I18n_Get(const char *key, const char *fallback) {
++  char lk[160];
++  size_t n = 0;
++  for (; key[n] && n < sizeof(lk) - 1; n++)
++    lk[n] = (char)tolower((uint8)key[n]);
++  lk[n] = 0;
++  for (int i = 0; i < g_entry_count; i++)
++    if (!strcmp(g_entries[i].key, lk))
++      return g_entries[i].value;
++  return fallback;
++}
++
++typedef struct { char *out; size_t size; } NameCtx;
++static void FindName(const char *section, const char *key, const char *value, void *ctx) {
++  NameCtx *nc = ctx;
++  if (!strcmp(section, "language") && !strcmp(key, "name") && nc->out[0] == 0)
++    snprintf(nc->out, nc->size, "%s", value);
++}
++
++// ---------------------------------------------------------------------------
++// Language list and selection
++
++static void Enumerate(void) {
++  g_count = 0;
++  for (int i = 0; g_count < kMaxLanguages; i++) {
++    MemBlk mb = kDialogueMap(i);
++    if (mb.ptr == 0)
++      break;
++    MemBlk name = FindIndexInMemblk(mb, 0);
++    size_t n = name.size < kMaxCode - 1 ? name.size : kMaxCode - 1;
++    memcpy(g_codes[g_count], name.ptr, n);
++    g_codes[g_count][n] = 0;
++    g_names[g_count][0] = 0;
++    if (!strcmp(g_codes[g_count], "us")) {
++      strcpy(g_names[g_count], "ENGLISH");
++    } else {
++      char path[64];
++      snprintf(path, sizeof(path), "lang/%s.ini", g_codes[g_count]);
++      char *data = ReadFile(path);
++      if (data) {
++        NameCtx nc = { g_names[g_count], kMaxName };
++        ParseIni(data, FindName, &nc);
++        free(data);
++      }
++      if (!g_names[g_count][0])
++        for (size_t j = 0; j <= n; j++)
++          g_names[g_count][j] = (char)toupper((uint8)g_codes[g_count][j]);
++    }
++    g_count++;
++  }
++  if (g_count == 0) {  // very old asset file without a language map
++    strcpy(g_codes[0], "us");
++    strcpy(g_names[0], "ENGLISH");
++    g_count = 1;
++  }
++}
++
++static int FindLanguage(const char *code) {
++  for (int i = 0; i < g_count; i++)
++    if (!strcmp(g_codes[i], code))
++      return i;
++  return -1;
++}
++
++bool I18n_SetLanguage(const char *code) {
++  if (!code || !*code)
++    code = "us";
++  int i = FindLanguage(code);
++  if (i < 0) {
++    fprintf(stderr, "i18n: language '%s' is not in zelda3_assets.dat\n", code);
++    return false;
++  }
++  ZeldaSetLanguage(g_codes[i]);
++  LoadStrings(g_codes[i]);
++  g_current = i;
++  g_generation++;
++  printf("i18n: language %s (%s)\n", g_codes[i], g_names[i]);
++  return true;
++}
++
++void I18n_Init(const char *code) {
++  g_debug = getenv("ZELDA3_I18N_DEBUG") != NULL;
++  Enumerate();
++  if (!I18n_SetLanguage(code))
++    I18n_SetLanguage("us");
++}
++
++const char *I18n_CurrentCode(void) { return g_codes[g_current]; }
++int I18n_CurrentIndex(void) { return g_current; }
++int I18n_LanguageCount(void) { return g_count; }
++const char *I18n_LanguageCode(int i) { return (i >= 0 && i < g_count) ? g_codes[i] : "us"; }
++const char *I18n_LanguageName(int i) { return (i >= 0 && i < g_count) ? g_names[i] : "ENGLISH"; }
++uint32 I18n_Generation(void) { return g_generation; }
++
++// ---------------------------------------------------------------------------
++// Text helpers
++
++// Decodes one UTF-8 character and returns its plain upper/lower case ASCII
++// letter (accents dropped), or the character itself for ASCII.
++static int NextChar(const char **ps) {
++  const uint8 *s = (const uint8 *)*ps;
++  uint32 c = *s++;
++  if (c >= 0xc0 && (*s & 0xc0) == 0x80) {
++    if (c < 0xe0) {
++      c = (c & 0x1f) << 6 | (*s++ & 0x3f);
++    } else {
++      // three or more bytes: skip, not a Latin letter
++      while ((*s & 0xc0) == 0x80) s++;
++      c = '?';
++    }
++  }
++  *ps = (const char *)s;
++  if (c < 0x80)
++    return (int)c;
++  static const char kLatin1[] =  // U+00C0 .. U+00FF without accents
++      "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYTs"
++      "aaaaaaaceeeeiiiidnooooo/ouuuuyty";
++  if (c >= 0xc0 && c <= 0xff)
++    return kLatin1[c - 0xc0];
++  if (c == 0xa1) return '!';  // inverted marks: not in the fonts
++  if (c == 0xbf) return '?';
++  return '?';
++}
++
++// Converts a UTF-8 string to plain ASCII (accents dropped, inverted ! and ?
++// removed).
++static void ToAscii(const char *s, char *out, size_t size, bool upper) {
++  size_t n = 0;
++  while (*s && n + 1 < size) {
++    bool inverted = (uint8)s[0] == 0xc2 && ((uint8)s[1] == 0xa1 || (uint8)s[1] == 0xbf);
++    int c = NextChar(&s);
++    if (inverted)
++      continue;
++    out[n++] = (char)(upper ? toupper(c) : c);
++  }
++  out[n] = 0;
++}
++
++// ---------------------------------------------------------------------------
++// Pause menu (HUD letter tiles: A-Z at 0x150, blank 0xf5, small dot 0x16a)
++
++static uint16 HudTile(int c) {
++  if (c >= 'A' && c <= 'Z') return 0x150 + (c - 'A');
++  if (c == '-' || c == '.') return 0x16a;
++  return 0xf5;
++}
++
++static void HudRow(const char *s, uint16 *out, int width, uint16 attr, bool right) {
++  int len = (int)strlen(s);
++  if (len > width) len = width;
++  int start = right ? width - len : 0;
++  for (int i = 0; i < width; i++)
++    out[i] = attr | 0xf5;
++  for (int i = 0; i < len; i++)
++    out[start + i] = attr | HudTile((uint8)s[i]);
++}
++
++bool I18n_HudText(const char *key, uint16 *out, int rows, uint16 attr) {
++  char k[64];
++  snprintf(k, sizeof(k), "hud.%s", key);
++  const char *v = I18n_Get(k, NULL);
++  if (!v)
++    return false;
++  char buf[64];
++  ToAscii(v, buf, sizeof(buf), true);
++  char *bar = strchr(buf, '|');
++  if (rows == 1) {
++    if (bar) *bar = ' ';
++    HudRow(Trim(buf), out, 8, attr, false);
++  } else if (bar) {
++    *bar = 0;
++    HudRow(Trim(buf), out, 8, attr, false);
++    HudRow(Trim(bar + 1), out + 8, 8, attr, false);
++  } else {
++    HudRow("", out, 8, attr, false);
++    HudRow(Trim(buf), out + 8, 8, attr, false);
++  }
++  return true;
++}
++
++bool I18n_HudAbility(const char *key, uint16 *out10, uint16 attr, uint16 suffix_tile, int offset) {
++  char k[64];
++  snprintf(k, sizeof(k), "hud.%s", key);
++  const char *v = I18n_Get(k, NULL);
++  if (!v)
++    return false;
++  char buf[32];
++  ToAscii(v, buf, sizeof(buf), true);
++  char *word = Trim(buf);
++  int len = (int)strlen(word), room = 5 - offset - (suffix_tile != 0);
++  if (len > room) len = room;
++  HudRow("", out10, 5, attr, false);
++  HudRow("", out10 + 5, 5, attr, false);
++  for (int i = 0; i < len; i++)
++    out10[5 + offset + i] = attr | HudTile((uint8)word[i]);
++  if (suffix_tile)
++    out10[5 + offset + len] = suffix_tile;
++  return true;
++}
++
++// ---------------------------------------------------------------------------
++// File select screen. Text there is drawn with the 8x16 dialogue font that
++// TransferFontToVRAM uploads (always the US one): character c uses tile
++// (c & 0x70) * 2 + (c & 0xf) for its top half and that + 16 for the bottom.
++
++static const char kUsFontChars[] =
++    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!?-.,";
++
++static int FontTile(int c) { return (c & 0x70) * 2 + (c & 0xf); }
++
++static int CharToFont(int ch) {
++  if (ch == ' ') return 89;
++  if (ch == 'I') return 95;   // centred I used by the original screens
++  if (ch == '>') return 68;
++  if (ch == '(') return 69;
++  if (ch == ')') return 70;
++  if (ch == '"') return 76;
++  if (ch == '\'') return 81;
++  if (ch == '<') return 90;
++  const char *p = strchr(kUsFontChars, ch);
++  return (p && ch) ? (int)(p - kUsFontChars) : 89;
++}
++
++// Returns the character whose top half is `tile`, or 0.
++static int FontTopChar(int tile) {
++  static char table[0x400];
++  static bool init;
++  if (!init) {
++    static const char kExtra[] = {' ', '>', '(', ')', '"', '\'', '<', 'I'};
++    for (const char *p = kUsFontChars; *p; p++)
++      table[FontTile(CharToFont(*p))] = *p;
++    for (size_t i = 0; i < sizeof(kExtra); i++)
++      table[FontTile(CharToFont(kExtra[i]))] = kExtra[i];
++    table[FontTile(8)] = 'I';  // the regular I too
++    init = true;
++  }
++  return table[tile & 0x3ff];
++}
++
++typedef struct { uint16 dst; int n; char text[64]; } PendingRow;
++
++// stripe words are little endian and not necessarily aligned
++static uint16 GetW(const uint8 *p, int i) { return p[i * 2] | p[i * 2 + 1] << 8; }
++static void SetTile(uint8 *p, int i, int tile) {
++  uint16 v = (GetW(p, i) & 0xfc00) | tile;
++  p[i * 2] = (uint8)v;
++  p[i * 2 + 1] = (uint8)(v >> 8);
++}
++
++void I18n_TranslateStripes(uint8 *p, size_t size) {
++  if (!strcmp(g_codes[g_current], "us") && !g_debug)
++    return;
++  uint8 *end = p + size;
++  PendingRow pend[8];
++  int npend = 0;
++  while (p + 4 <= end && !(p[0] & 0x80)) {
++    uint16 dst = p[0] << 8 | p[1];
++    uint8 flags = p[2];
++    int len = ((flags << 8 | p[3]) & 0x3fff) + 1;
++    p += 4;
++    if (flags & 0x40) { p += 2; continue; }        // fill
++    if (p + len > end) break;
++    int n = len / 2;
++    if ((flags & 0x80) || n > 63) { p += len; continue; }  // vertical
++    // bottom half of a row translated just before?
++    int pi;
++    for (pi = 0; pi < npend; pi++)
++      if ((uint16)(pend[pi].dst + 0x20) == dst && pend[pi].n == n)
++        break;
++    if (pi < npend) {
++      for (int i = 0; i < n; i++)
++        SetTile(p, i, FontTile(CharToFont((uint8)pend[pi].text[i])) + 16);
++      pend[pi] = pend[--npend];
++      p += len;
++      continue;
++    }
++    // decode the row
++    char text[64], key[80];
++    int i, letters = 0;
++    for (i = 0; i < n; i++) {
++      int c = FontTopChar(GetW(p, i));
++      if (!c) break;
++      text[i] = (char)c;
++      letters += isalpha(c) != 0;
++    }
++    if (i == n && letters >= 2) {
++      text[n] = 0;
++      // key: words separated by single spaces
++      size_t k = 0;
++      int lead = 0;
++      while (text[lead] == ' ') lead++;
++      for (const char *s = text + lead; *s && k < sizeof(key) - 1; s++)
++        if (*s != ' ' || (s[1] && s[1] != ' ' && k))
++          key[k++] = *s;
++      key[k] = 0;
++      char lk[96];
++      snprintf(lk, sizeof(lk), "fileselect.%s", key);
++      const char *v = I18n_Get(lk, NULL);
++      if (g_debug)
++        printf("i18n: file select text \"%s\"%s\n", key, v ? " (translated)" : "");
++      if (v && npend < 8) {
++        char val[64];
++        ToAscii(v, val, sizeof(val), false);
++        PendingRow *pr = &pend[npend++];
++        pr->dst = dst;
++        pr->n = n;
++        memset(pr->text, ' ', n);
++        pr->text[n] = 0;
++        size_t vl = strlen(val);
++        if ((int)vl > n - lead) {
++          lead = n - (int)vl;
++          if (lead < 0) { lead = 0; vl = n; }
++        }
++        memcpy(pr->text + lead, val, vl);
++        for (int j = 0; j < n; j++)
++          SetTile(p, j, FontTile(CharToFont((uint8)pr->text[j])));
++      }
++    }
++    p += len;
++  }
++}
++
++const uint8 *I18n_TranslatedTilemap(int which, const uint8 *src, size_t size) {
++  static uint8 *cache[8];
++  static uint32 cache_gen[8];
++  if (which < 0 || which >= 8 || !strcmp(g_codes[g_current], "us"))
++    return src;
++  if (!cache[which] || cache_gen[which] != g_generation) {
++    free(cache[which]);
++    cache[which] = malloc(size);
++    if (!cache[which])
++      return src;
++    memcpy(cache[which], src, size);
++    I18n_TranslateStripes(cache[which], size);
++    cache_gen[which] = g_generation;
++  }
++  return cache[which];
++}
+diff --git a/app/jni/src/src/i18n.h b/app/jni/src/src/i18n.h
+new file mode 100644
+index 0000000..7007dda
+--- /dev/null
++++ b/app/jni/src/src/i18n.h
+@@ -0,0 +1,46 @@
++// zelda3-ds: runtime language selection.
++//
++// The dialogue of every language lives in zelda3_assets.dat (kDialogueMap,
++// built from lang/<code>/ by tools/lang/build_assets.py). Everything else
++// (pause menu item names, file select screen, bottom-screen UI) comes from
++// lang/<code>.ini next to the executable. "us" is the original English game
++// and needs no file.
++#ifndef ZELDA3_I18N_H_
++#define ZELDA3_I18N_H_
++
++#include "types.h"
++
++// Called once after the assets are loaded. NULL/"" selects English.
++void I18n_Init(const char *code);
++// Switches language at runtime (dialogue, HUD and UI strings). Safe between
++// frames; a message box already on screen keeps its language.
++bool I18n_SetLanguage(const char *code);
++const char *I18n_CurrentCode(void);
++int I18n_CurrentIndex(void);
++// Languages compiled into zelda3_assets.dat, in asset order ("us" first).
++int I18n_LanguageCount(void);
++const char *I18n_LanguageCode(int i);
++// Display name in upper case (from lang/<code>.ini, "ENGLISH" for us).
++const char *I18n_LanguageName(int i);
++// Increments every time the language changes.
++uint32 I18n_Generation(void);
++
++// "section.key" lookup in the current language file; returns `fallback`
++// (the English text) when the key is missing.
++const char *I18n_Get(const char *key, const char *fallback);
++
++// Pause-menu text built from HUD letter tiles (A-Z, accents dropped). Fills
++// `out` with `rows` x 8 tile entries using `attr` for the palette bits and
++// returns true when the current language has `key` in [hud].
++bool I18n_HudText(const char *key, uint16 *out, int rows, uint16 attr);
++// Same for the 5x2-tile ability words of the "DO" box: the word goes on the
++// bottom row starting at tile `offset`, followed by `suffix_tile` (if not 0).
++bool I18n_HudAbility(const char *key, uint16 *out10, uint16 attr, uint16 suffix_tile, int offset);
++
++// File select screen: translates the text rows of a VRAM stripe list
++// (kBgTilemap_* or the vram_upload_data tables of select_file.c) in place.
++void I18n_TranslateStripes(uint8 *stripes, size_t size);
++// Returns a translated copy of a ROM tilemap stripe list (cached).
++const uint8 *I18n_TranslatedTilemap(int which, const uint8 *src, size_t size);
++
++#endif  // ZELDA3_I18N_H_
+diff --git a/app/jni/src/src/main.c b/app/jni/src/src/main.c
+index f3405e7..1117f58 100644
+--- a/app/jni/src/src/main.c
++++ b/app/jni/src/src/main.c
+@@ -28,6 +28,7 @@
+ #include "util.h"
+ #include "audio.h"
+ #include "android_logging.h"
++#include "i18n.h"
+ #if defined(__linux__) && !defined(__ANDROID__)
+ #define ZELDA3_ROCKNIX_SLEEP 1
+ #include "platform/linux/rocknix_sleep.h"
+@@ -517,7 +518,7 @@ int main(int argc, char** argv) {
+                        g_config.extend_y * kPpuRenderFlags_Height240 |
+                        g_config.no_sprite_limits * kPpuRenderFlags_NoSpriteLimits;
+   ZeldaEnableMsu(g_config.enable_msu);
+-  ZeldaSetLanguage(g_config.language);
++  I18n_Init(g_config.language);  // zelda3-ds: dialogue + interface language
+ 
+   if (g_config.fullscreen == 1)
+     g_win_flags ^= SDL_WINDOW_FULLSCREEN_DESKTOP;
+diff --git a/app/jni/src/src/messaging.c b/app/jni/src/src/messaging.c
+index be4b204..809706f 100644
+--- a/app/jni/src/src/messaging.c
++++ b/app/jni/src/src/messaging.c
+@@ -2236,8 +2236,19 @@ enum {
+ #define TEXTCMD_PARAM(a) ((a) >> 6)
+ #define TEXTCMD_MK(c, x, m) ((c) << 6 | (x) << 1 | (m))
+ 
++// zelda3-ds: the language can change while the game runs. The encoding and
++// font used to build messaging_text_buffer are kept until the next message,
++// so a box already on screen is not garbled by a language switch.
++static uint8 g_text_buffer_flags;
++static MemBlk g_text_buffer_font;
++static bool g_text_buffer_valid;
++
++static uint8 Text_BufferFlags(void) {
++  return g_text_buffer_valid ? g_text_buffer_flags : g_zenv.dialogue_flags;
++}
++
+ uint32 Text_DecodeCmd(uint8 a, const uint8 *src) {
+-  if ((g_zenv.dialogue_flags & 1) == 0) {
++  if ((Text_BufferFlags() & 1) == 0) {
+     // US encoding
+     if (a < kTextCommandStart_US)
+       return TEXTCMD_MK(a, kTextCmd_IsLetter, 0);
+@@ -2296,6 +2307,9 @@ uint32 Text_DecodeCmd(uint8 a, const uint8 *src) {
+ 
+ // Perform initial parsing of the string, expanding words, processing some commands, etc.
+ void Text_LoadCharacterBuffer() {  // 8ec4e2
++  g_text_buffer_flags = g_zenv.dialogue_flags;
++  g_text_buffer_font = g_zenv.dialogue_font_blk;
++  g_text_buffer_valid = true;
+   MemBlk dictionary = FindIndexInMemblk(g_zenv.dialogue_blk, 0);
+   MemBlk dialogue = FindIndexInMemblk(g_zenv.dialogue_blk, 1);
+   MemBlk text_str = FindIndexInMemblk(dialogue, dialogue_message_index);
+@@ -2553,8 +2567,9 @@ void VWF_RenderSingle(int c) {  // 8ecab8
+     vwf_flag_next_line = 0;
+   }
+   
+-  const uint8 *kFontData = FindIndexInMemblk(g_zenv.dialogue_font_blk, 0).ptr;
+-  uint8 width = FindIndexInMemblk(g_zenv.dialogue_font_blk, 1).ptr[c];
++  MemBlk font = g_text_buffer_valid ? g_text_buffer_font : g_zenv.dialogue_font_blk;
++  const uint8 *kFontData = FindIndexInMemblk(font, 0).ptr;
++  uint8 width = FindIndexInMemblk(font, 1).ptr[c];
+   assert(width <= 8);
+ 
+   int i = vwf_var1++;
+diff --git a/app/jni/src/src/nmi.c b/app/jni/src/src/nmi.c
+index 9a482a1..eab8166 100644
+--- a/app/jni/src/src/nmi.c
++++ b/app/jni/src/src/nmi.c
+@@ -2,6 +2,7 @@
+ #include "zelda_rtl.h"
+ #include "variables.h"
+ #include "messaging.h"
++#include "i18n.h"
+ #include "snes/snes_regs.h"
+ #include "snes/ppu.h"
+ #include "assets.h"
+@@ -229,12 +230,13 @@ void NMI_DoUpdates() {  // 8089e0
+     switch (nmi_load_bg_from_vram) {
+     case 1: p = g_ram + 0x1002; break;
+     case 2: p = g_ram + 0x1000; break;
++    // zelda3-ds: the file select screens are translated (i18n.c)
+     case 3: p = kBgTilemap_0; break;
+     case 4: p = g_ram + 0x21b; break;
+-    case 5: p = kBgTilemap_1; break;
+-    case 6: p = kBgTilemap_2; break;
+-    case 7: p = kBgTilemap_3; break;
+-    case 8: p = kBgTilemap_4; break;
++    case 5: p = I18n_TranslatedTilemap(1, kBgTilemap_1, kBgTilemap_1_SIZE); break;
++    case 6: p = I18n_TranslatedTilemap(2, kBgTilemap_2, kBgTilemap_2_SIZE); break;
++    case 7: p = I18n_TranslatedTilemap(3, kBgTilemap_3, kBgTilemap_3_SIZE); break;
++    case 8: p = I18n_TranslatedTilemap(4, kBgTilemap_4, kBgTilemap_4_SIZE); break;
+     case 9: p = kBgTilemap_5; break;
+     default: assert(0);
+     }
+diff --git a/app/jni/src/src/platform/linux/second_screen_sdl.c b/app/jni/src/src/platform/linux/second_screen_sdl.c
+index 802b10e..c281672 100644
+--- a/app/jni/src/src/platform/linux/second_screen_sdl.c
++++ b/app/jni/src/src/platform/linux/second_screen_sdl.c
+@@ -21,6 +21,10 @@
+ #include "../../second_screen_tables.h"  // kIconCount/kIconCols/kGlyphCount/kGlyphCols
+ #include "ss_sheets.h"             // generated cell indices for icons/glyphs/letters
+ #include "ss_textures.h"           // baked theme background tiles (menu/parchment/stone)
++#include "../../i18n.h"            // zelda3-ds: interface language (lang/<code>.ini)
++
++// zelda3-ds: interface text in the current language, English fallback
++#define TR(key, english) I18n_Get("ui." key, english)
+ 
+ // API provided by second_screen.c
+ int  SS_GetLinkX(void);
+@@ -105,6 +109,12 @@ static const int kCrystalMarks[7][3] = {
+   {1, 320, 3376},    // Misery Mire
+   {8, 3800, 256},    // Turtle Rock
+ };
++static const char *const kDungeonKeys[14] = {
++  "dungeons.sewers", "dungeons.hyrule_castle", "dungeons.eastern_palace", "dungeons.desert_palace",
++  "dungeons.castle_tower", "dungeons.swamp_palace", "dungeons.dark_palace", "dungeons.misery_mire",
++  "dungeons.skull_woods", "dungeons.ice_palace", "dungeons.tower_of_hera", "dungeons.thieves_town",
++  "dungeons.turtle_rock", "dungeons.ganons_tower",
++};
+ static const char *const kDungeonNames[14] = {
+   "SEWERS", "HYRULE CASTLE", "EASTERN PALACE", "DESERT PALACE", "CASTLE TOWER",
+   "SWAMP PALACE", "DARK PALACE", "MISERY MIRE", "SKULL WOODS", "ICE PALACE",
+@@ -120,6 +130,15 @@ static const int kDotPalette[4] = {0, 1, 2, 1};  // marker blink cycle (kDungMap
+ static const char *const kPadCmdNames[12] = {
+   "UP", "DOWN", "LEFT", "RIGHT", "SELECT", "START", "A", "B", "X", "Y", "L", "R",
+ };
++static const char *const kPadCmdKeys[12] = {
++  "ui.pad_up", "ui.pad_down", "ui.pad_left", "ui.pad_right", "ui.pad_select", "ui.pad_start",
++  "ui.pad_a", "ui.pad_b", "ui.pad_x", "ui.pad_y", "ui.pad_l", "ui.pad_r",
++};
++static const char *const kPadButtonKeys[17] = {
++  "ui.btn_a", "ui.btn_b", "ui.btn_x", "ui.btn_y", "ui.btn_back", "ui.btn_guide", "ui.btn_start",
++  "ui.btn_l3", "ui.btn_r3", "ui.btn_l1", "ui.btn_r1", "ui.btn_dup", "ui.btn_ddown", "ui.btn_dleft",
++  "ui.btn_dright", "ui.btn_l2", "ui.btn_r2",
++};
+ static const char *const kPadButtonLabel[17] = {
+   "A", "B", "X", "Y", "BACK", "GUIDE", "START", "L3", "R3",
+   "L1", "R1", "D UP", "D DOWN", "D LEFT", "D RIGHT", "L2", "R2",
+@@ -167,10 +186,11 @@ static bool ss_needs_rebuild;
+ 
+ // touch rects recomputed every draw, used by the tap handler
+ static RectFS map_area_r, tab_items_r, tab_gear_r, tab_map_r, tab_settings_r, y_ring_r;
+-enum { SET_ASPECT, SET_HUD, SET_CRT, SET_AUTOSAVE, SET_STATES, SET_REMAP, SET_QUIT, SET_COUNT };
++enum { SET_ASPECT, SET_HUD, SET_CRT, SET_AUTOSAVE, SET_LANGUAGE, SET_STATES, SET_REMAP, SET_QUIT, SET_COUNT };
+ static RectFS settings_row_r[SET_COUNT], save_state_r, load_state_r, remap_row_r[12], remap_back_r;
+ static RectFS tab_bar_r;
+ static const char *const kAspectLabel[4] = {"ORIGINAL", "STRETCH", "WIDE", "PIXEL"};
++static const char *const kAspectKeys[4] = {"ui.aspect_original", "ui.aspect_stretch", "ui.aspect_wide", "ui.aspect_pixel"};
+ static const char *const kAspectIni[4]   = {"original", "stretch", "wide", "pixel"};
+ static uint32_t quit_armed_until;      // QUIT needs a second tap within 3 s
+ static const char *toast_text;         // short confirmation shown in settings
+@@ -301,12 +321,51 @@ static void draw_cell(SDL_Texture *tex, int cell, int cellpx, int cols, float x,
+ static void draw_icon(int cell, float x, float y, float s)  { draw_cell(tex_icons, cell, 16, SS_ICON_COLS, x, y, s); }
+ static void draw_glyph(int cell, float x, float y, float s) { draw_cell(tex_glyphs, cell, 8, SS_GLYPH_COLS, x, y, s); }
+ 
++// zelda3-ds: UTF-8 aware. Accented capitals (Á É Í Ó Ú Ü Ñ Ç...) are drawn as
++// the HUD letter plus a diacritic; lower case is shown in upper case.
++enum { MARK_NONE, MARK_ACUTE, MARK_GRAVE, MARK_CIRC, MARK_TILDE, MARK_DIAER, MARK_CEDIL };
++static int next_glyph(const char **ps, int *mark) {
++  const unsigned char *s = (const unsigned char *)*ps;
++  unsigned c = *s++;
++  if (c >= 0xc0 && (*s & 0xc0) == 0x80) {
++    if (c < 0xe0) c = (c & 0x1f) << 6 | (*s++ & 0x3f);
++    else { while ((*s & 0xc0) == 0x80) s++; c = '?'; }
++  }
++  *ps = (const char *)s;
++  *mark = MARK_NONE;
++  if (c >= 0xc0 && c <= 0xff) {
++    static const char kBase[] = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYTSAAAAAAACEEEEIIIIDNOOOOO/OUUUUYTY";
++    static const char kMark[] = "21345006213521350421345002135100""21345006213521350421345002135105";
++    *mark = kMark[c - 0xc0] - '0';
++    return kBase[c - 0xc0];
++  }
++  if (c >= 'a' && c <= 'z') return (int)c - 32;
++  return c < 0x80 ? (int)c : '?';
++}
+ static float text_width(const char *s, float sc) {
+   sc = px_scale(sc);
+   float w = 0;
+-  for (; *s; s++) w += (*s == ' ' ? 5 : 8) * sc;
++  while (*s) {
++    int mark, ch = next_glyph(&s, &mark);
++    w += (ch == ' ' ? 5 : (ch == '.' || ch == ',') ? 4 : 8) * sc;
++  }
+   return w;
+ }
++// small square of the letter colours (white with dark outline), in font pixels
++static void text_dot(float x, float y, float sc, int px, int py) {
++  fill_rect(x + (px - 1) * sc, y + (py - 1) * sc, 3 * sc, 3 * sc, 0xff282830u);
++  fill_rect(x + px * sc, y + py * sc, sc, sc, 0xfff8f8f8u);
++}
++static void draw_mark(int mark, float x, float y, float sc) {
++  switch (mark) {
++  case MARK_ACUTE: text_dot(x, y, sc, 4, -2); text_dot(x, y, sc, 3, -1); break;
++  case MARK_GRAVE: text_dot(x, y, sc, 2, -2); text_dot(x, y, sc, 3, -1); break;
++  case MARK_CIRC:  text_dot(x, y, sc, 2, -1); text_dot(x, y, sc, 3, -2); text_dot(x, y, sc, 4, -1); break;
++  case MARK_TILDE: text_dot(x, y, sc, 1, -1); text_dot(x, y, sc, 2, -2); text_dot(x, y, sc, 3, -1); text_dot(x, y, sc, 4, -2); break;
++  case MARK_DIAER: text_dot(x, y, sc, 1, -2); text_dot(x, y, sc, 5, -2); break;
++  case MARK_CEDIL: text_dot(x, y, sc, 3, 8); break;
++  }
++}
+ static void draw_text(const char *s, float x, float y, float sc) {
+   static const int kDigitGlyph[10] = {
+     SS_GLYPH_DIGIT0, SS_GLYPH_DIGIT1, SS_GLYPH_DIGIT2, SS_GLYPH_DIGIT3, SS_GLYPH_DIGIT4,
+@@ -314,11 +373,19 @@ static void draw_text(const char *s, float x, float y, float sc) {
+   };
+   sc = px_scale(sc);
+   float cx = floorf(x);
+-  for (; *s; s++) {
+-    char ch = *s;
++  while (*s) {
++    int mark, ch = next_glyph(&s, &mark);
+     if (ch == ' ') { cx += 5 * sc; continue; }
+-    if (ch >= '0' && ch <= '9') draw_glyph(kDigitGlyph[ch - '0'], cx, y, sc);
+-    else if (ch >= 'A' && ch <= 'Z') draw_cell(tex_letters, kSS_LetterCell[ch - 'A'], 8, SS_LETTER_COLS, cx, y, sc);
++    if (ch == '.' || ch == ',') { text_dot(cx, y, sc, 1, 6); cx += 4 * sc; continue; }
++    if (ch == '-') {
++      fill_rect(cx + 0 * sc, y + 2 * sc, 7 * sc, 3 * sc, 0xff282830u);
++      fill_rect(cx + 1 * sc, y + 3 * sc, 5 * sc, sc, 0xfff8f8f8u);
++    } else if (ch >= '0' && ch <= '9') {
++      draw_glyph(kDigitGlyph[ch - '0'], cx, y, sc);
++    } else if (ch >= 'A' && ch <= 'Z') {
++      draw_cell(tex_letters, kSS_LetterCell[ch - 'A'], 8, SS_LETTER_COLS, cx, y, sc);
++      if (mark) draw_mark(mark, cx, y, sc);
++    }
+     cx += 8 * sc;
+   }
+ }
+@@ -408,7 +475,7 @@ static bool try_load_art(void) {
+     int r = SS_GetDungeonLayout(i, lay, sizeof(lay));
+     if (r < 0) return false;
+     Dungeon *d = &dungeons[i];
+-    d->name = kDungeonNames[i];
++    d->name = kDungeonNames[i];  // English; translated when drawn (kDungeonKeys)
+     d->boss = kDungeonBoss[i];
+     d->floors = r & 0xFF;
+     if (d->floors > 16) d->floors = 16;
+@@ -550,7 +617,7 @@ static void draw_dungeon(RectFS r, int link_x, int link_y, int room, int dungeon
+   Dungeon *d = (palace >= 0 && palace < 14) ? &dungeons[palace] : NULL;
+ 
+   float bs = 3 * u;
+-  const char *name = d ? d->name : "DUNGEON";
++  const char *name = d ? I18n_Get(kDungeonKeys[palace], d->name) : TR("dungeon", "DUNGEON");
+   float tw = text_width(name, bs);
+   float bx = r.x + r.w / 2 - tw / 2, by = r.y + 20 * u;
+   fill_round(bx - 20 * u, by - 9 * u, tw + 40 * u, 8 * bs + 18 * u, 8 * u, COL_STONE_EDGE_L);
+@@ -587,8 +654,10 @@ static void draw_dungeon(RectFS r, int link_x, int link_y, int room, int dungeon
+     fill_round(pr->x + 2 * u, pr->y + 2 * u, pr->w - 4 * u, pr->h - 4 * u, 5 * u,
+                sel ? COL_PLAQUE_SEL : COL_PLAQUE);
+     char label[16];
+-    if (fl >= 0) snprintf(label, sizeof(label), "%dF", fl + 1);
+-    else snprintf(label, sizeof(label), "B%d", -fl);
++    // zelda3-ds: floor labels, e.g. "%dF" / "B%d" ("P%d" / "S%d" in Spanish)
++    const char *fmt = fl >= 0 ? TR("floor", "%dF") : TR("basement", "B%d");
++    if (!strstr(fmt, "%d") || strchr(strstr(fmt, "%d") + 2, '%')) fmt = fl >= 0 ? "%dF" : "B%d";
++    snprintf(label, sizeof(label), fmt, fl >= 0 ? fl + 1 : -fl);
+     float face_px = 16 * px_scale(2 * u);
+     float lx = pr->x + face_px + 6 * u;   // text centred in the space right of the face
+     draw_text(label, lx + (pr->x + pr->w - lx) / 2 - text_width(label, label_s) / 2,
+@@ -663,7 +732,8 @@ static void draw_dungeon(RectFS r, int link_x, int link_y, int room, int dungeon
+ 
+ static void draw_items(RectFS r) {
+   menu_box(r, COL_BOX_BORDER);
+-  draw_text("ITEMS", r.x + r.w / 2 - text_width("ITEMS", 3 * u) / 2, r.y + 18 * u, 3 * u);
++  const char *title = TR("items", "ITEMS");
++  draw_text(title, r.x + r.w / 2 - text_width(title, 3 * u) / 2, r.y + 18 * u, 3 * u);
+ 
+   float cw1 = (r.w - 70 * u) / 5, cw2 = (r.h - 100 * u) / 4;
+   float cellW = cw1 < cw2 ? cw1 : cw2;
+@@ -693,7 +763,8 @@ static void draw_items(RectFS r) {
+ 
+ static void draw_gear(RectFS r) {
+   menu_box(r, COL_BOX_BORDER2);
+-  draw_text("GEAR", r.x + r.w / 2 - text_width("GEAR", 3 * u) / 2, r.y + 18 * u, 3 * u);
++  const char *title = TR("gear", "GEAR");
++  draw_text(title, r.x + r.w / 2 - text_width(title, 3 * u) / 2, r.y + 18 * u, 3 * u);
+ 
+   float Hh = r.h;
+   float x0 = r.x + 56 * u;
+@@ -720,7 +791,7 @@ static void draw_gear(RectFS r) {
+ 
+   // row 2: bottles (left) + pendants (right)
+   float y1 = y0 + 16 * s + 0.115f * Hh;
+-  draw_text("BOTTLES", x0, y1 - 40 * u, 2.4f * u);
++  draw_text(TR("bottles", "BOTTLES"), x0, y1 - 40 * u, 2.4f * u);
+   for (int i = 0; i < 4; i++) {
+     float x = x0 + i * step + (step - 16 * s) / 2;
+     slot_bg(x - 8 * u, y1 - 8 * u, 16 * s + 16 * u);
+@@ -730,7 +801,7 @@ static void draw_gear(RectFS r) {
+   }
+   float px = x0 + 4.3f * step;
+   float right_w = r.x + r.w - 20 * u - px;
+-  draw_text("PENDANTS", px, y1 - 40 * u, 2.4f * u);
++  draw_text(TR("pendants", "PENDANTS"), px, y1 - 40 * u, 2.4f * u);
+   int pend = sram8(0x74);
+   static const int pbit[3] = {4, 2, 1};
+   static const uint32_t pcol[3] = {COL(64, 200, 88), COL(70, 110, 240), COL(230, 60, 60)};
+@@ -741,7 +812,7 @@ static void draw_gear(RectFS r) {
+   }
+   // crystals under pendants
+   float cyC = y1 + 0.14f * Hh;
+-  draw_text("CRYSTALS", px, cyC, 2.4f * u);
++  draw_text(TR("crystals", "CRYSTALS"), px, cyC, 2.4f * u);
+   float cs = right_w / 7.0f;
+   if (cs > 40 * u) cs = 40 * u;
+   int owned7 = sram8(0x7A) & 0x7F, n_owned = 0;
+@@ -937,11 +1008,14 @@ static void draw_settings_row(RectFS *row, bool armed) {
+ }
+ 
+ static void draw_remap_panel(RectFS r) {
+-  draw_text("REMAP BUTTONS", r.x + r.w / 2 - text_width("REMAP BUTTONS", 3 * u) / 2,
+-            r.y + 18 * u, 3 * u);
++  const char *title = TR("remap_buttons", "REMAP BUTTONS");
++  draw_text(title, r.x + r.w / 2 - text_width(title, 3 * u) / 2, r.y + 18 * u, 3 * u);
+   remap_back_r = (RectFS){r.x + 20 * u, r.y + 12 * u, 90 * u, 38 * u};
++  const char *back = TR("back", "BACK");
++  float back_w = text_width(back, 2.2f * u) + 28 * u;
++  if (back_w > remap_back_r.w) remap_back_r.w = back_w;
+   draw_settings_row(&remap_back_r, false);
+-  draw_text("BACK", remap_back_r.x + remap_back_r.w / 2 - text_width("BACK", 2.2f * u) / 2,
++  draw_text(back, remap_back_r.x + remap_back_r.w / 2 - text_width(back, 2.2f * u) / 2,
+             remap_back_r.y + remap_back_r.h / 2 - 9 * u, 2.2f * u);
+ 
+   // resolve a pending capture from the game thread
+@@ -970,9 +1044,10 @@ static void draw_remap_panel(RectFS r) {
+     bool armed = remap_arm == i;
+     draw_settings_row(row, armed);
+     float ty = row->y + row->h / 2 - 9 * u;
+-    draw_text(kPadCmdNames[i], row->x + 14 * u, ty, 2.2f * u);
+-    const char *v = armed ? "PRESS KEY"
+-        : (pad_controls[i] >= 0 && pad_controls[i] < 17 ? kPadButtonLabel[pad_controls[i]] : "----");
++    draw_text(I18n_Get(kPadCmdKeys[i], kPadCmdNames[i]), row->x + 14 * u, ty, 2.2f * u);
++    const char *v = armed ? TR("press_key", "PRESS KEY")
++        : (pad_controls[i] >= 0 && pad_controls[i] < 17
++           ? I18n_Get(kPadButtonKeys[pad_controls[i]], kPadButtonLabel[pad_controls[i]]) : "----");
+     draw_text(v, row->x + row->w - 14 * u - text_width(v, 2.2f * u), ty, 2.2f * u);
+   }
+ }
+@@ -997,7 +1072,8 @@ static void draw_settings(RectFS r) {
+     draw_remap_panel(r);
+     return;
+   }
+-  draw_text("SETTINGS", r.x + r.w / 2 - text_width("SETTINGS", 3 * u) / 2, r.y + 18 * u, 3 * u);
++  const char *title = TR("settings", "SETTINGS");
++  draw_text(title, r.x + r.w / 2 - text_width(title, 3 * u) / 2, r.y + 18 * u, 3 * u);
+ 
+   int aspect = SS_GetTopAspect();
+   if (aspect < 0 || aspect > 3) aspect = 0;
+@@ -1017,18 +1093,20 @@ static void draw_settings(RectFS r) {
+       draw_settings_row(&save_state_r, false);
+       draw_settings_row(&load_state_r, false);
+       float ty = floorf(row->y + row_h / 2 - 4 * px_scale(sc));
+-      draw_text("SAVE STATE", save_state_r.x + half / 2 - text_width("SAVE STATE", sc) / 2, ty, sc);
+-      draw_text("LOAD STATE", load_state_r.x + half / 2 - text_width("LOAD STATE", sc) / 2, ty, sc);
++      const char *save = TR("save_state", "SAVE STATE"), *load = TR("load_state", "LOAD STATE");
++      draw_text(save, save_state_r.x + half / 2 - text_width(save, sc) / 2, ty, sc);
++      draw_text(load, load_state_r.x + half / 2 - text_width(load, sc) / 2, ty, sc);
+       continue;
+     }
+     draw_settings_row(row, i == SET_QUIT && quit_armed);
+     switch (i) {
+-    case SET_ASPECT:   draw_row_text(row, "TOP SCREEN", kAspectLabel[aspect], sc); break;
+-    case SET_HUD:      draw_row_text(row, "TOP SCREEN HUD", SS_IsHudHidden() ? "OFF" : "ON", sc); break;
+-    case SET_CRT:      draw_row_text(row, "CRT FILTER", SS_IsCrtFilter() ? "ON" : "OFF", sc); break;
+-    case SET_AUTOSAVE: draw_row_text(row, "AUTOSAVE ON EXIT", SS_GetAutosave() ? "ON" : "OFF", sc); break;
+-    case SET_REMAP:    draw_row_text(row, "REMAP BUTTONS", NULL, sc); draw_chevron(row); break;
+-    case SET_QUIT:     draw_row_text(row, quit_armed ? "TAP AGAIN TO QUIT" : "QUIT GAME", NULL, sc); break;
++    case SET_ASPECT:   draw_row_text(row, TR("top_screen", "TOP SCREEN"), I18n_Get(kAspectKeys[aspect], kAspectLabel[aspect]), sc); break;
++    case SET_HUD:      draw_row_text(row, TR("top_screen_hud", "TOP SCREEN HUD"), SS_IsHudHidden() ? TR("off", "OFF") : TR("on", "ON"), sc); break;
++    case SET_CRT:      draw_row_text(row, TR("crt_filter", "CRT FILTER"), SS_IsCrtFilter() ? TR("on", "ON") : TR("off", "OFF"), sc); break;
++    case SET_AUTOSAVE: draw_row_text(row, TR("autosave", "AUTOSAVE ON EXIT"), SS_GetAutosave() ? TR("on", "ON") : TR("off", "OFF"), sc); break;
++    case SET_LANGUAGE: draw_row_text(row, TR("language", "LANGUAGE"), I18n_LanguageName(I18n_CurrentIndex()), sc); break;
++    case SET_REMAP:    draw_row_text(row, TR("remap_buttons", "REMAP BUTTONS"), NULL, sc); draw_chevron(row); break;
++    case SET_QUIT:     draw_row_text(row, quit_armed ? TR("quit_confirm", "TAP AGAIN TO QUIT") : TR("quit", "QUIT GAME"), NULL, sc); break;
+     }
+   }
+ 
+@@ -1047,8 +1125,8 @@ static void show_toast(const char *text) {
+ }
+ 
+ static void settings_tap(float x, float y) {
+-  if (in_rect(&save_state_r, x, y)) { SS_SaveLoadState(true);  show_toast("STATE SAVED");  return; }
+-  if (in_rect(&load_state_r, x, y)) { SS_SaveLoadState(false); show_toast("STATE LOADED"); return; }
++  if (in_rect(&save_state_r, x, y)) { SS_SaveLoadState(true);  show_toast(TR("state_saved", "STATE SAVED"));  return; }
++  if (in_rect(&load_state_r, x, y)) { SS_SaveLoadState(false); show_toast(TR("state_loaded", "STATE LOADED")); return; }
+   int hit = -1;
+   for (int i = 0; i < SET_COUNT; i++)
+     if (i != SET_STATES && in_rect(&settings_row_r[i], x, y)) { hit = i; break; }
+@@ -1079,6 +1157,16 @@ static void settings_tap(float x, float y) {
+     update_ini("[General]", "Autosave", on ? "1" : "0");
+     break;
+   }
++  case SET_LANGUAGE: {
++    // zelda3-ds: cycle through the languages in zelda3_assets.dat
++    int n = I18n_LanguageCount();
++    if (n > 1) {
++      int next = (I18n_CurrentIndex() + 1) % n;
++      if (I18n_SetLanguage(I18n_LanguageCode(next)))
++        update_ini("[General]", "Language", I18n_LanguageCode(next));
++    }
++    break;
++  }
+   case SET_REMAP:
+     SS_GetGamepadControls(pad_controls);
+     remap_mode = true;
+@@ -1117,9 +1205,9 @@ static void draw_tab_bar(float tab_h) {
+   tab_gear_r  = (RectFS){x0, y, bw, bh};
+   tab_map_r   = (RectFS){x0 + bw + tgap, y, bw, bh};
+   tab_items_r = (RectFS){x0 + 2 * (bw + tgap), y, bw, bh};
+-  draw_tab_button(tab_gear_r, "GEAR", tab == TAB_GEAR);
+-  draw_tab_button(tab_map_r, "MAP", tab == TAB_MAP);
+-  draw_tab_button(tab_items_r, "ITEMS", tab == TAB_ITEMS);
++  draw_tab_button(tab_gear_r, TR("tab_gear", "GEAR"), tab == TAB_GEAR);
++  draw_tab_button(tab_map_r, TR("tab_map", "MAP"), tab == TAB_MAP);
++  draw_tab_button(tab_items_r, TR("tab_items", "ITEMS"), tab == TAB_ITEMS);
+   draw_tab_button(tab_settings_r, NULL, tab == TAB_SETTINGS);
+   draw_cog(tab_settings_r.x + tab_settings_r.w / 2, tab_settings_r.y + tab_settings_r.h / 2,
+            bh * 0.28f);
+diff --git a/app/jni/src/src/select_file.c b/app/jni/src/src/select_file.c
+index 3a7e7cc..780f52a 100644
+--- a/app/jni/src/src/select_file.c
++++ b/app/jni/src/src/select_file.c
+@@ -2,6 +2,7 @@
+ #include "variables.h"
+ #include "load_gfx.h"
+ #include "select_file.h"
++#include "i18n.h"
+ #include "snes/snes_regs.h"
+ #include "overworld.h"
+ #include "messaging.h"
+@@ -300,6 +301,7 @@ void FileSelect_TriggerNameStripesAndAdvance() {  // 8cceb1
+     0xa9, 0x18, 0xa9, 0x18, 0xa9, 0x18, 0xa9, 0x18, 0xa9, 0x18, 0xa9, 0x18, 0xff,
+   };
+   memcpy(vram_upload_data, kSelectFile_Func3_Data, 253);
++  I18n_TranslateStripes((uint8 *)(vram_upload_data), 253);  // zelda3-ds
+   INIDISP_copy = 0xf;
+   nmi_disable_core_updates = 0;
+   submodule_index++;
+@@ -439,6 +441,7 @@ void CopyFile_SelectionAndBlinker() {  // 8cd13f
+ 
+   vram_upload_offset = 0xac;
+   memcpy(vram_upload_data, kCopyFile_SelectionAndBlinker_Tab, 173);
++  I18n_TranslateStripes((uint8 *)(vram_upload_data), 173);  // zelda3-ds
+ 
+   for (int k = 0; k != 3; k++) {
+     if (selectfile_arr1[k] & 1) {
+@@ -481,6 +484,7 @@ void CopyFile_SelectionAndBlinker() {  // 8cd13f
+     }
+     selectfile_R20 = selectfile_R16 * 2;
+     memcpy(vram_upload_data + 26, kCopyFile_SelectionAndBlinker_Tab1, 73);
++    I18n_TranslateStripes((uint8 *)(vram_upload_data + 26), 73);  // zelda3-ds
+     if (selectfile_R16 != 2) {
+       uint16 *dst = vram_upload_data + selectfile_R16 * 6;
+       dst[26] = 0x2762;
+@@ -529,6 +533,7 @@ void CopyFile_TargetSelectionAndBlink() {  // 8cd27b
+   static const uint16 kCopyFile_TargetSelectionAndBlink_Dst[2] = {0x38, 0x60};
+   static const uint16 kCopyFile_TargetSelectionAndBlink_Tab1[3] = {0x18e7, 0x18e8, 0x18e9};
+   memcpy(vram_upload_data, kCopyFile_TargetSelectionAndBlink_Tab0, 133);
++  I18n_TranslateStripes((uint8 *)(vram_upload_data), 133);  // zelda3-ds
+ 
+   for (int k = 0, j = 0; k != 3; k++) {
+     if (k * 2 == selectfile_R20)
+@@ -575,6 +580,7 @@ void CopyFile_TargetSelectionAndBlink() {  // 8cd27b
+     }
+     selectfile_R18 = selectfile_arr2[selectfile_R16];
+     memcpy(vram_upload_data + 26, kCopyFile_TargetSelectionAndBlink_Tab2, 49);
++    I18n_TranslateStripes((uint8 *)(vram_upload_data + 26), 49);  // zelda3-ds
+     if (selectfile_R16 == 0) {
+       uint16 *dst = vram_upload_data;
+       dst[26] = 0x1462;
+@@ -674,6 +680,7 @@ void KILLFile_ChooseTarget() {  // 8cd4ba
+   static const uint8 kKILLFile_ChooseTarget_FaerieX[4] = {36, 36, 36, 28};
+   static const uint8 kKILLFile_ChooseTarget_FaerieY[4] = {103, 127, 151, 191};
+   memcpy(vram_upload_data, kKILLFile_ChooseTarget_Tab, 253);
++  I18n_TranslateStripes((uint8 *)(vram_upload_data), 253);  // zelda3-ds
+   for (int k = 0; k < 3; k++) {
+     if (selectfile_arr1[k])
+       SelectFile_Func17(k);
+@@ -710,6 +717,7 @@ void KILLFile_ChooseTarget() {  // 8cd4ba
+     }
+ 
+     memcpy(vram_upload_data, kKILLFile_ChooseTarget_Tab2, 101);
++    I18n_TranslateStripes((uint8 *)(vram_upload_data), 101);  // zelda3-ds
+     submodule_index++;
+     if (selectfile_R16 != 2) {
+       uint16 *dst = vram_upload_data + selectfile_R16 * 6;
+-- 
+2.43.0
+
